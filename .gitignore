@@ -1,0 +1,24 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+*.env
+
+*.test
+*.out
+go.work
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+Blog/data/*
+Blog/posts/*
+
+# macOS
+.DS_Store
+.idea/

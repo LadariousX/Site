@@ -1,0 +1,44 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.Title}}</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+  <!-- Common Stylesheet -->
+  <link rel="stylesheet" href="/common-assets/css/base.css">
+
+  <!-- Page-specific stylesheets -->
+  {{block "styles" .}}{{end}}
+</head>
+<body>
+<!--  <header class="site-header">-->
+<!--    <a href="/" class="site-logo">poop Blog</a>-->
+<!--    <nav class="site-nav">-->
+<!--      <a href="/">Home</a>-->
+<!--      <a href="/about">About</a>-->
+<!--    </nav>-->
+<!--  </header>-->
+
+  <main>
+    {{block "content" .}}{{end}}
+  </main>
+
+<!--  <footer class="site-footer">-->
+<!--     Blog powerd by <a href="go.dev">Go</a> and the <a href="https://github.com/yuin/goldmark">Goldmark Markdown parser</a>. Built with Claude.-->
+<!--  </footer>-->
+
+  <!-- Common JavaScript -->
+  <script src="/common-assets/js/app.js"></script>
+
+  <!-- Page-specific scripts -->
+  {{block "scripts" .}}{{end}}
+</body>
+</html>
+{{end}}

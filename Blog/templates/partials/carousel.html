@@ -1,0 +1,39 @@
+{{define "carousel"}}
+{{if .Images}}
+  {{if eq (len .Images) 1}}
+    <!-- Single media: no carousel chrome -->
+    <div class="carousel">
+      {{$media := index .Images 0}}
+      {{if or (hasSuffix $media ".mov") (hasSuffix $media ".mp4") (hasSuffix $media ".webm") (hasSuffix $media ".MOV") (hasSuffix $media ".MP4")}}
+        <video src="/post-images/{{$media}}" controls class="carousel-video"></video>
+      {{else}}
+        <img src="/post-images/{{$media}}" alt="{{.Title}}">
+      {{end}}
+    </div>
+  {{else}}
+    <!-- Multiple media: full carousel -->
+    <div class="carousel" data-index="0">
+      <div class="carousel-track">
+        {{range .Images}}
+        <div class="carousel-slide">
+          {{if or (hasSuffix . ".mov") (hasSuffix . ".mp4") (hasSuffix . ".webm") (hasSuffix . ".MOV") (hasSuffix . ".MP4")}}
+            <video src="/post-images/{{.}}" controls class="carousel-video"></video>
+          {{else}}
+            <img src="/post-images/{{.}}" alt="">
+          {{end}}
+        </div>
+        {{end}}
+      </div>
+      <button class="carousel-prev" aria-label="Previous">&larr;</button>
+      <button class="carousel-next" aria-label="Next">&rarr;</button>
+
+      <div class="carousel-counter">1 / {{len .Images}}</div>
+    </div>
+  {{end}}
+{{else}}
+  <!-- No media: placeholder -->
+  <div class="carousel">
+    <div class="carousel-placeholder">No media</div>
+  </div>
+{{end}}
+{{end}}

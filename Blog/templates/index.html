@@ -1,0 +1,53 @@
+{{define "index-styles"}}
+{{end}}
+
+{{define "index-content"}}
+<div class="container">
+  <h1>Latest Posts</h1>
+
+  <div class="post-grid">
+    {{range .Posts}}
+    <article class="post-tile">
+      {{if .CoverImage}}
+      <a href="/posts/{{.Slug}}" class="post-cover">
+        <img src="/post-images/{{.CoverImage}}" alt="image missing 🤷🏼‍♂️">
+      </a>
+      {{end}}
+      <div class="post-tile-content">
+        <h2 class="post-title">
+          <a href="/posts/{{.Slug}}">{{.Title}}</a>
+        </h2>
+        <div class="post-date">{{.PublishedAt.Format "January 2, 2006"}}</div>
+        <p class="post-excerpt">{{.Excerpt}}</p>
+        <a href="/posts/{{.Slug}}" class="read-more">Read more →</a>
+      </div>
+    </article>
+    {{end}}
+  </div>
+
+
+</div>
+{{end}}
+
+{{define "index.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.Title}}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/common-assets/css/base.css">
+  {{template "index-styles" .}}
+</head>
+<body>
+  {{template "header" .}}
+  <main>
+    {{template "index-content" .}}
+  </main>
+  {{template "footer" .}}
+</body>
+</html>
+{{end}}
