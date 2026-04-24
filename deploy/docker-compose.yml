@@ -17,7 +17,7 @@ services:
 #      - proxy
 
   blog:
-    image: go-refresh:v0
+    image: go-refresh:v1
     volumes:
       - ../Blog:/workspace/Blog
       - ../common-assets:/workspace/common-assets

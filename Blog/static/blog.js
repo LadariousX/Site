@@ -16,7 +16,19 @@ function initCarousels() {
 
     let currentIndex = 0;
 
+    function stopAllVideos() {
+      // Stop ALL videos in this carousel
+      const allVideos = carousel.querySelectorAll('video');
+      allVideos.forEach(video => {
+        video.pause();
+        video.currentTime = 0;
+      });
+    }
+
     function updateCarousel() {
+      // Stop all videos first
+      stopAllVideos();
+
       track.style.transform = `translateX(-${currentIndex * 100}%)`;
       carousel.dataset.index = currentIndex;
 
@@ -39,7 +51,7 @@ function initCarousels() {
     // Button navigation
     if (prevBtn) prevBtn.addEventListener('click', prev);
     if (nextBtn) nextBtn.addEventListener('click', next);
-
+d
     // Keyboard navigation
     carousel.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') prev();
@@ -74,6 +86,16 @@ function initLightbox() {
   const galleryGrid = document.querySelector('.gallery-grid');
   if (!galleryGrid) return;
 
+  // Force video thumbnails to load first frame
+  const galleryVideos = document.querySelectorAll('.gallery-thumb video');
+  galleryVideos.forEach(video => {
+    // Wait for metadata to load before seeking
+    video.addEventListener('loadedmetadata', function() {
+      this.currentTime = 0.1;
+    });
+    video.load();
+  });
+
   // Create lightbox markup
   const lightbox = document.createElement('div');
   lightbox.id = 'lightbox';
@@ -103,23 +125,48 @@ function initLightbox() {
   }
 
   function openLightbox(index) {
+    // Stop all videos before opening
+    stopAllVideos();
+
     currentIndex = index;
     updateLightbox();
     lightbox.hidden = false;
     document.body.style.overflow = 'hidden';
   }
 
+  function stopAllVideos() {
+    // Stop ALL videos on the entire page
+    const allVideos = document.querySelectorAll('video');
+    allVideos.forEach(video => {
+      video.pause();
+      video.currentTime = 0;
+    });
+  }
+
   function closeLightbox() {
+    const lightboxVideos = lightboxMedia.querySelectorAll('video');
+    lightboxVideos.forEach(video => {
+      video.pause();
+      video.src = '';
+      video.load();
+    });
+
+    lightboxMedia.innerHTML = '';
+
     lightbox.hidden = true;
     document.body.style.overflow = '';
   }
 
   function updateLightbox() {
-    // Pause any playing videos before switching
-    const existingVideo = lightboxMedia.querySelector('video');
-    if (existingVideo) {
-      existingVideo.pause();
-    }
+    const existingVideos = lightboxMedia.querySelectorAll('video');
+    existingVideos.forEach(video => {
+      video.pause();
+      video.src = '';
+      video.load();
+    });
+
+    // Clear and rebuild media container
+    lightboxMedia.innerHTML = '';
 
     const thumb = thumbs[currentIndex];
     const src = thumb.dataset.src;

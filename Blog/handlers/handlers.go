@@ -50,7 +50,7 @@ func (h *Handlers) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title": "Blog - Latest Posts",
+		"Title": "Layden Blackwell's Project Blog",
 		"Posts": postViews,
 	}
 
@@ -117,29 +117,29 @@ func (h *Handlers) PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Create a view struct with decoded data
 	postView := struct {
-		Title               string
-		Slug                string
-		Excerpt             string
-		PublishedAt         *time.Time
-		BodyHTML            template.HTML
-		Images              []string
-		Files               []string
-		Has3DModel          bool
+		Title                string
+		Slug                 string
+		Excerpt              string
+		PublishedAt          *time.Time
+		BodyHTML             template.HTML
+		Images               []string
+		Files                []string
+		Has3DModel           bool
 		HasDownloadableFiles bool
-		HasRepoZip          bool
-		RepoURL             string
+		HasRepoZip           bool
+		RepoURL              string
 	}{
-		Title:               post.Title,
-		Slug:                post.Slug,
-		Excerpt:             post.Excerpt,
-		PublishedAt:         post.PublishedAt,
-		BodyHTML:            template.HTML(post.BodyHTML),
-		Images:              images,
-		Files:               files,
-		Has3DModel:          has3DModel,
+		Title:                post.Title,
+		Slug:                 post.Slug,
+		Excerpt:              post.Excerpt,
+		PublishedAt:          post.PublishedAt,
+		BodyHTML:             template.HTML(post.BodyHTML),
+		Images:               images,
+		Files:                files,
+		Has3DModel:           has3DModel,
 		HasDownloadableFiles: hasDownloadableFiles,
-		HasRepoZip:          hasRepoZip,
-		RepoURL:             post.RepoURL,
+		HasRepoZip:           hasRepoZip,
+		RepoURL:              post.RepoURL,
 	}
 
 	data := map[string]interface{}{

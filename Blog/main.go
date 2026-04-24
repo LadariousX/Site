@@ -15,8 +15,8 @@ import (
 
 func main() {
 	// Environment variables with defaults
-	dbPath := getEnv("DB_PATH", "../db/Blog.db")
-	backupDir := getEnv("BACKUP_DIR", "../db/backups")
+	dbPath := getEnv("DB_PATH", "data/Blog.db")
+	backupDir := getEnv("BACKUP_DIR", "data/backups")
 	postsDir := getEnv("POSTS_DIR", "posts")
 	addr := getEnv("ADDR", "0.0.0.0:8080")
 

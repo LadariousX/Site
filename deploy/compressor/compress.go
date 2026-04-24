@@ -1,15 +1,35 @@
-// compress.go — Image & video compression tool
+// compress.go — Image & video compression tool for Blog posts
 // Dependencies: ffmpeg, imagemagick (convert)
-// Usage: go run compress.go <directory>
-//        go build -o compress && ./compress <directory>
 //
-// Images (JPEG/PNG) → WebP  — EXIF orientation is baked in before conversion
-// Videos (MP4/MOV)  → H.264 MP4 — rotation metadata is applied via transpose filter
-// Originals are moved to <directory>/source/
+// Usage:
+//   go run compress.go                        — process all posts in ../../Blog/posts/
+//   go run compress.go ../../Blog/posts       — same, explicit posts root
+//   go run compress.go ../../Blog/posts/name  — process a single post
+//   go run compress.go -f [path]              — force recompress, ignoring existing output
+//
+// Flags:
+//   -f   Force mode — clears images/ and recompresses everything from raw/
+//        Without -f, files that already have a compressed output in images/ are skipped
+//
+// Directory structure expected:
+//   posts/
+//     postname/
+//       images/
+//         raw/    ← source files live here (never touched)
+//                 ← compressed output is placed directly in images/
+//
+// Behavior:
+//   1. Skips files whose output already exists in images/ (unless -f is set)
+//   2. With -f: clears all files in images/ (not raw/, not subdirs) before compressing
+//   3. Reads source files from images/raw/
+//   4. Compresses images  → WebP  (EXIF orientation baked in, resized if needed)
+//   5. Compresses videos  → H.264 MP4 (rotation baked in)
+//   6. Places output in images/ — raw/ is left untouched
 
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math"
 	"os"
@@ -28,6 +48,8 @@ const (
 	videoCRF          = "23"
 	videoPreset       = "slow"
 	videoAudioBitrate = "128k"
+
+	defaultPostsDir = "/Users/layden/Development/Site/Blog/posts"
 )
 
 // ── ANSI colors ───────────────────────────────────────────────────────────────
@@ -49,6 +71,7 @@ type result struct {
 	filename string
 	before   int64
 	after    int64
+	skipped  bool
 	err      error
 }
 
@@ -96,8 +119,6 @@ func checkDeps() error {
 }
 
 // ── EXIF orientation ──────────────────────────────────────────────────────────
-// Reads the EXIF orientation tag via ffprobe so we have no extra deps.
-// Returns 1 (normal) if unreadable.
 
 func exifOrientation(src string) int {
 	out, err := exec.Command("ffprobe",
@@ -108,7 +129,6 @@ func exifOrientation(src string) int {
 		src,
 	).Output()
 	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
-		// Try side_data rotation (MOV/MP4 display matrix)
 		out, err = exec.Command("ffprobe",
 			"-v", "quiet",
 			"-select_streams", "v:0",
@@ -127,47 +147,34 @@ func exifOrientation(src string) int {
 	return deg
 }
 
-// rotateArgs returns the ffmpeg vf filter string needed to bake in rotation,
-// and whether any rotation is actually needed.
 func rotateArgs(degrees int) (string, bool) {
-	// Normalize to 0–359
 	degrees = ((degrees % 360) + 360) % 360
 	switch degrees {
 	case 90:
-		return "transpose=1", true // 90° clockwise
+		return "transpose=1", true
 	case 180:
-		return "transpose=2,transpose=2", true // 180°
+		return "transpose=2,transpose=2", true
 	case 270:
-		return "transpose=2", true // 90° counter-clockwise
+		return "transpose=2", true
 	default:
 		return "", false
 	}
 }
 
 // ── Image compression ─────────────────────────────────────────────────────────
-// Pipeline:
-//  1. convert (ImageMagick): -auto-orient bakes EXIF orientation into pixels,
-//     -resize caps width at maxImageWidth, -strip removes all metadata.
-//  2. ImageMagick convert writes directly to WebP (built-in delegate).
-//  3. Move original to source/.
-//
-// ImageMagick is used instead of ffmpeg because ffmpeg's EXIF auto-rotate is
-// inconsistent for still images across versions. ImageMagick -auto-orient
-// correctly handles all 8 EXIF orientation variants.
 
-func compressImage(src, sourceDir string) result {
+func compressImage(src, destDir string, force bool) result {
 	filename := filepath.Base(src)
 	stem := strings.TrimSuffix(filename, filepath.Ext(filename))
-	dest := filepath.Join(filepath.Dir(src), stem+".webp")
+	dest := filepath.Join(destDir, stem+".webp")
 	before := fileSize(src)
 
-	// Step 1: ImageMagick — auto-orient + resize → temp PNG.
-	// -auto-orient   reads EXIF Orientation tag and physically rotates pixels
-	// -resize Wx>    shrinks if wider than maxImageWidth, never upscales (> flag)
-	// -strip         removes all metadata after orientation is baked in
-	// ImageMagick 6: operator flags must come BEFORE the source file.
-	// Convert directly to WebP using IM's built-in WebP delegate —
-	// no intermediate PNG needed.
+	if !force {
+		if _, err := os.Stat(dest); err == nil {
+			return result{filename: filename, skipped: true}
+		}
+	}
+
 	resizeFlag := fmt.Sprintf("%dx>", maxImageWidth)
 	convertCmd := exec.Command("convert",
 		"-auto-orient",
@@ -183,45 +190,30 @@ func compressImage(src, sourceDir string) result {
 			err: fmt.Errorf("convert (ImageMagick): %w\n%s", err, string(out))}
 	}
 
-	// Step 3: move original to source/
-	if err := os.Rename(src, filepath.Join(sourceDir, filename)); err != nil {
-		return result{filename: filename, before: before,
-			err: fmt.Errorf("move to source: %w", err)}
-	}
-
 	return result{filename: filename, before: before, after: fileSize(dest)}
 }
 
 // ── Video compression ─────────────────────────────────────────────────────────
-// Pipeline:
-//  1. Probe rotation metadata.
-//  2. Build a -vf transpose filter if needed to bake rotation into pixels.
-//  3. Re-encode to H.264/AAC MP4 with faststart; strip all metadata.
-//  4. Move original to source/.
 
-func compressVideo(src, sourceDir string) result {
+func compressVideo(src, destDir string, force bool) result {
 	filename := filepath.Base(src)
 	stem := strings.TrimSuffix(filename, filepath.Ext(filename))
-	dest := filepath.Join(filepath.Dir(src), stem+".mp4")
+	dest := filepath.Join(destDir, stem+".mp4")
 	before := fileSize(src)
 
-	// If source is already .mp4, write to a temp name first
-	isSamePath := strings.EqualFold(src, dest)
-	actualDest := dest
-	if isSamePath {
-		actualDest = filepath.Join(filepath.Dir(src), stem+"_compressed.mp4")
+	if !force {
+		if _, err := os.Stat(dest); err == nil {
+			return result{filename: filename, skipped: true}
+		}
 	}
 
-	// Build vf filter: bake rotation if present
 	degrees := exifOrientation(src)
 	vfFilter, needsRotate := rotateArgs(degrees)
 
 	args := []string{"-i", src}
-
 	if needsRotate {
 		args = append(args, "-vf", vfFilter)
 	}
-
 	args = append(args,
 		"-c:v", "libx264",
 		"-crf", videoCRF,
@@ -229,80 +221,18 @@ func compressVideo(src, sourceDir string) result {
 		"-c:a", "aac",
 		"-b:a", videoAudioBitrate,
 		"-movflags", "+faststart",
-		"-map_metadata", "-1", // strip all metadata (rotation tag gone, pixels are correct)
-		"-y", actualDest,
+		"-map_metadata", "-1",
+		"-y", dest,
 	)
 
 	cmd := exec.Command("ffmpeg", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		os.Remove(actualDest)
+		os.Remove(dest)
 		return result{filename: filename, before: before,
 			err: fmt.Errorf("ffmpeg: %w\n%s", err, string(out))}
 	}
 
-	after := fileSize(actualDest)
-
-	// Move original to source/
-	if err := os.Rename(src, filepath.Join(sourceDir, filename)); err != nil {
-		os.Remove(actualDest)
-		return result{filename: filename, before: before,
-			err: fmt.Errorf("move to source: %w", err)}
-	}
-
-	// Rename temp → final if needed
-	if isSamePath {
-		if err := os.Rename(actualDest, dest); err != nil {
-			return result{filename: filename, before: before,
-				err: fmt.Errorf("rename compressed: %w", err)}
-		}
-	}
-
-	return result{filename: filename, before: before, after: after}
-}
-
-// ── HTML src rewriting ────────────────────────────────────────────────────────
-// Walks the target directory (non-recursively) for .html files and replaces
-// any src/href references to .jpg/.jpeg/.png with .webp equivalents.
-
-var imageExtReplacer = strings.NewReplacer(
-	".jpg\"", ".webp\"",
-	".jpg'", ".webp'",
-	".jpeg\"", ".webp\"",
-	".jpeg'", ".webp'",
-	".png\"", ".webp\"",
-	".png'", ".webp'",
-	// URL-encoded variants (just in case)
-	".jpg%22", ".webp%22",
-	".jpeg%22", ".webp%22",
-	".png%22", ".webp%22",
-)
-
-func rewriteHTMLRefs(dir string) ([]string, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	var rewritten []string
-	for _, e := range entries {
-		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".html") {
-			continue
-		}
-		path := filepath.Join(dir, e.Name())
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return rewritten, fmt.Errorf("read %s: %w", e.Name(), err)
-		}
-		original := string(data)
-		updated := imageExtReplacer.Replace(original)
-		if updated == original {
-			continue // nothing changed
-		}
-		if err := os.WriteFile(path, []byte(updated), 0644); err != nil {
-			return rewritten, fmt.Errorf("write %s: %w", e.Name(), err)
-		}
-		rewritten = append(rewritten, e.Name())
-	}
-	return rewritten, nil
+	return result{filename: filename, before: before, after: fileSize(dest)}
 }
 
 // ── Collect files ─────────────────────────────────────────────────────────────
@@ -330,172 +260,186 @@ func collectFiles(dir string) (images, videos []string, err error) {
 	return
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── Clear images/ directory ───────────────────────────────────────────────────
+// Removes all files directly inside dir, leaving subdirectories (e.g. raw/) intact.
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "Usage: compress <directory>")
-		os.Exit(1)
+func clearDir(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
 	}
-
-	targetDir := os.Args[1]
-	if info, err := os.Stat(targetDir); err != nil || !info.IsDir() {
-		fmt.Fprintf(os.Stderr, "Error: '%s' is not a valid directory.\n", targetDir)
-		os.Exit(1)
-	}
-
-	if err := checkDeps(); err != nil {
-		fmt.Fprintln(os.Stderr, colorize(red, "✗ "+err.Error()))
-		os.Exit(1)
-	}
-
-	sourceDir := filepath.Join(targetDir, "source")
-
-	// If a source/ folder already exists, ask the user whether to re-compress
-	// those originals instead of (or in addition to) any new files in targetDir.
-	if info, err := os.Stat(sourceDir); err == nil && info.IsDir() {
-		srcImages, srcVideos, err := collectFiles(sourceDir)
-		if err == nil && len(srcImages)+len(srcVideos) > 0 {
-			fmt.Println()
-			fmt.Printf("%s source/ folder detected with %d file(s).",
-				colorize(yellow, "  ⚠"), len(srcImages)+len(srcVideos))
-			fmt.Print("  Delete compressed files and re-compress originals? [y/N] ")
-
-			var answer string
-			fmt.Scanln(&answer)
-			answer = strings.ToLower(strings.TrimSpace(answer))
-
-			if answer == "y" || answer == "yes" {
-				// Remove all current .webp and .mp4 files in targetDir
-				entries, _ := os.ReadDir(targetDir)
-				removed := 0
-				for _, e := range entries {
-					if e.IsDir() {
-						continue
-					}
-					ext := strings.ToLower(filepath.Ext(e.Name()))
-					if ext == ".webp" || ext == ".mp4" {
-						os.Remove(filepath.Join(targetDir, e.Name()))
-						removed++
-					}
-				}
-				// Move source/ files back to targetDir
-				for _, f := range append(srcImages, srcVideos...) {
-					dest := filepath.Join(targetDir, filepath.Base(f))
-					if err := os.Rename(f, dest); err != nil {
-						fmt.Fprintf(os.Stderr, "  Failed to restore %s: %v", filepath.Base(f), err)
-					}
-				}
-				fmt.Printf("  Removed %d compressed file(s), restored %d original(s).",
-					removed, len(srcImages)+len(srcVideos))
-			} else {
-				fmt.Println("  Skipping — will compress any new files only.")
-			}
-			fmt.Println()
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		if err := os.Remove(filepath.Join(dir, e.Name())); err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
-	images, videos, err := collectFiles(targetDir)
+// ── Process a single post ─────────────────────────────────────────────────────
+
+func processPost(postDir string, force bool) (totalErrors []string) {
+	imagesDir := filepath.Join(postDir, "images")
+	srcDir := filepath.Join(imagesDir, "raw")
+
+	// Verify raw/ exists and has files
+	images, videos, err := collectFiles(srcDir)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error reading directory:", err)
-		os.Exit(1)
+		return []string{fmt.Sprintf("%s: cannot read raw/: %v", filepath.Base(postDir), err)}
 	}
-
 	total := len(images) + len(videos)
 	if total == 0 {
-		fmt.Println(colorize(yellow, "  No JPEG, PNG, MOV, or MP4 files found in "+targetDir))
-		os.Exit(0)
+		fmt.Printf("  %s %s — no source files found, skipping\n",
+			colorize(yellow, "⚠"), filepath.Base(postDir))
+		return nil
 	}
 
-	if err := os.MkdirAll(sourceDir, 0755); err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating source dir:", err)
-		os.Exit(1)
-	}
+	fmt.Printf("\n%s\n  Post: %s\n", hr(), filepath.Base(postDir))
 
-	absTarget, _ := filepath.Abs(targetDir)
-	fmt.Println()
-	fmt.Printf("%s\n  Target: %s\n", colorize(bold, "  compress"), absTarget)
-	fmt.Println(hr())
+	// In force mode, wipe existing output first
+	if force {
+		if err := clearDir(imagesDir); err != nil {
+			return []string{fmt.Sprintf("%s: failed to clear images/: %v", filepath.Base(postDir), err)}
+		}
+		fmt.Printf("  Cleared images/ — force recompressing %d file(s) from raw/\n", total)
+	} else {
+		fmt.Printf("  Checking %d file(s) from raw/ — skipping existing output\n", total)
+	}
 
 	results := make(chan result, total)
 	var wg sync.WaitGroup
 
-	// Launch image goroutines
 	if len(images) > 0 {
 		fmt.Println(colorize(bold, "  Images → WebP"))
 		for _, f := range images {
 			wg.Add(1)
 			go func(path string) {
 				defer wg.Done()
-				results <- compressImage(path, sourceDir)
+				results <- compressImage(path, imagesDir, force)
 			}(f)
 		}
 	}
 
-	// Launch video goroutines
 	if len(videos) > 0 {
 		fmt.Println(colorize(bold, "  Video → H.264 MP4"))
 		for _, f := range videos {
 			wg.Add(1)
 			go func(path string) {
 				defer wg.Done()
-				results <- compressVideo(path, sourceDir)
+				results <- compressVideo(path, imagesDir, force)
 			}(f)
 		}
 	}
 
-	// Close results channel once all goroutines finish
 	go func() {
 		wg.Wait()
 		close(results)
 	}()
 
-	// Print results as they arrive; tally errors
 	var mu sync.Mutex
-	var errors []string
-
-	// Collect and print inline as channel drains
-	// (channel is already buffered so goroutines never block)
 	for r := range results {
 		mu.Lock()
-		if r.err != nil {
+		switch {
+		case r.err != nil:
 			fmt.Printf("  %s %-40s %s\n",
-				colorize(red, "✗"),
-				r.filename,
-				colorize(red, r.err.Error()),
-			)
-			errors = append(errors, r.filename+": "+r.err.Error())
-		} else {
+				colorize(red, "✗"), r.filename, colorize(red, r.err.Error()))
+			totalErrors = append(totalErrors, filepath.Base(postDir)+"/"+r.filename+": "+r.err.Error())
+		case r.skipped:
+			fmt.Printf("  %s %-40s already exists\n",
+				colorize(yellow, "–"), r.filename)
+		default:
 			fmt.Printf("  %s %-40s %s → %s\n",
-				colorize(green, "✓"),
-				r.filename,
-				humanSize(r.before),
-				humanSize(r.after),
-			)
+				colorize(green, "✓"), r.filename, humanSize(r.before), humanSize(r.after))
 		}
 		mu.Unlock()
 	}
 
-	// Rewrite HTML refs from .jpg/.jpeg/.png → .webp
-	rewritten, htmlErr := rewriteHTMLRefs(targetDir)
-	if len(rewritten) > 0 {
-		fmt.Println()
-		fmt.Println(colorize(bold, "  HTML src rewrites"))
-		for _, f := range rewritten {
-			fmt.Printf("  %s %s\n", colorize(green, "✓"), f)
+	return totalErrors
+}
+
+// ── Resolve target posts ──────────────────────────────────────────────────────
+// Returns a list of post directories to process based on the argument provided.
+//   - No arg / posts root → all subdirectories of postsDir
+//   - Single post dir     → just that directory
+
+func resolvePostDirs(arg string) ([]string, error) {
+	postsRoot, _ := filepath.Abs(defaultPostsDir)
+
+	target := postsRoot
+	if arg != "" {
+		target, _ = filepath.Abs(arg)
+	}
+
+	info, err := os.Stat(target)
+	if err != nil || !info.IsDir() {
+		return nil, fmt.Errorf("'%s' is not a valid directory", target)
+	}
+
+	// If the target looks like the posts root (has no images/raw inside it directly),
+	// treat it as the posts root and enumerate subdirectories.
+	srcCheck := filepath.Join(target, "images", "raw")
+	if _, err := os.Stat(srcCheck); os.IsNotExist(err) {
+		// Treat as posts root — collect all subdirectories
+		entries, err := os.ReadDir(target)
+		if err != nil {
+			return nil, err
 		}
+		var posts []string
+		for _, e := range entries {
+			if e.IsDir() {
+				posts = append(posts, filepath.Join(target, e.Name()))
+			}
+		}
+		if len(posts) == 0 {
+			return nil, fmt.Errorf("no post subdirectories found in %s", target)
+		}
+		return posts, nil
+	}
+
+	// Target is a single post directory
+	return []string{target}, nil
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+func main() {
+	force := flag.Bool("f", false, "force recompress — clear images/ and reprocess all files from raw/")
+	flag.Parse()
+
+	arg := flag.Arg(0)
+
+	if err := checkDeps(); err != nil {
+		fmt.Fprintln(os.Stderr, colorize(red, "✗ "+err.Error()))
+		os.Exit(1)
+	}
+
+	postDirs, err := resolvePostDirs(arg)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, colorize(red, "✗ "+err.Error()))
+		os.Exit(1)
+	}
+
+	mode := "incremental"
+	if *force {
+		mode = "force"
+	}
+	fmt.Printf("\n%s\n  compress [%s] — %d post(s) to process\n", hr(), mode, len(postDirs))
+
+	var allErrors []string
+	for _, dir := range postDirs {
+		errs := processPost(dir, *force)
+		allErrors = append(allErrors, errs...)
 	}
 
 	fmt.Println(hr())
-	if len(errors) == 0 && htmlErr == nil {
-		fmt.Printf("%s Originals saved to: %s\n\n",
-			colorize(green, "  Done."), sourceDir)
+	if len(allErrors) == 0 {
+		fmt.Println(colorize(green, "  Done.") + "\n")
 	} else {
-		if htmlErr != nil {
-			errors = append(errors, "html rewrite: "+htmlErr.Error())
-		}
-		fmt.Printf("%s %d error(s):\n", colorize(yellow, "  Done with"), len(errors))
-		for _, e := range errors {
+		fmt.Printf("%s %d error(s):\n", colorize(yellow, "  Done with"), len(allErrors))
+		for _, e := range allErrors {
 			fmt.Println("    -", e)
 		}
 		fmt.Println()

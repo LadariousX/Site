@@ -10,7 +10,7 @@
 
       <div>
         {{if gt (len .Post.Images) 1}}
-        <a href="/posts/{{.Post.Slug}}/gallery" class="gallery-button">Gallery</a>
+        <a href="/posts/{{.Post.Slug}}/gallery" class="gallery-button">Gallery&nearrow;</a>
         {{end}}
 
         {{if .Post.Has3DModel}}
@@ -50,7 +50,9 @@
           src="/post-files/{{.}}" alt="3D Model"
           camera-controls touch-action="pan-y"
           auto-rotate shadow-intensity="1"
-          exposure="0.4">
+          exposure="0.4"
+          reveal="auto"
+          loading="eager">
         </model-viewer>
       </div>
       {{end}}
@@ -104,13 +106,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{.Title}}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/common-assets/css/base.css">
+  {{template "head" .}}
   {{template "post-styles" .}}
   {{if .Post.Has3DModel}}
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.2.0/model-viewer.min.js"></script>
