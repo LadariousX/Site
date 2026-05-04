@@ -14,3 +14,6 @@ I use a `Synchronize.sh` to allow me to do all the develpment on my local machin
 to the server and restarts the containers. Ive also added a option to sinc to my iCloud Drive, not a big deal to me 
 since the project is only a few gigs now. I may only sync the posts dir in the future since the rest of the site is on
 GitHub.
+
+# other
+a site called [Image to STL]("https://imagetostl.com/convert/file/step/to/gltf#convert") is used to create the .gltf file used in the 3d preview.

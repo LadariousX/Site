@@ -8,7 +8,15 @@ else
     exit 1
 fi
 
-IGNORE_FILE="rsync_ignore.txt"
+IGNORE_PATTERNS=(
+    "*.exe"
+    "**/raw/"
+    "*.DS_Store"
+    "**/*.db"
+    "**/*.db-shm"
+    "**/*.db-wal"
+    "**/data/"
+)
 
 # --- SELECTION MENU ---
 echo "---------------------------------------"
@@ -50,12 +58,10 @@ case $CHOICE in
         ;;
 esac
 
-# Check for ignore file
-if [[ ! -f "$IGNORE_FILE" ]]; then
-    EXCLUDE_CMD=""
-else
-    EXCLUDE_CMD="--exclude-from=$IGNORE_FILE"
-fi
+EXCLUDE_CMD=()
+for pattern in "${IGNORE_PATTERNS[@]}"; do
+    EXCLUDE_CMD+=("--exclude=$pattern")
+done
 
 # --- EXECUTION ---
 echo "---------------------------------------"
@@ -66,10 +72,9 @@ if [[ "$SYNC_REMOTE" == true ]]; then
     echo "TO:   $DEST"
     echo "---------------------------------------"
 
-    # -a: archive, -v: verbose, -z: compress, -P: progress/partial
-    # --delete: mirror the source exactly (removes files on dest not in src)
     rsync -avzP --delete \
-        $EXCLUDE_CMD \
+        -e "ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3" \
+        "${EXCLUDE_CMD[@]}" \
         "$SRC" "$DEST"
 
     echo "---------------------------------------"

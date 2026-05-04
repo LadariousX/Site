@@ -1,30 +1,37 @@
-// compress.go — Image & video compression tool for Blog posts
+// compress.go — Image & video compression tool
 // Dependencies: ffmpeg, imagemagick (convert)
 //
 // Usage:
-//   go run compress.go                        — process all posts in ../../Blog/posts/
-//   go run compress.go ../../Blog/posts       — same, explicit posts root
-//   go run compress.go ../../Blog/posts/name  — process a single post
-//   go run compress.go -f [path]              — force recompress, ignoring existing output
+//   go run compress.go                          — process all posts in ../../Blog/posts/
+//   go run compress.go ../../Blog/posts         — same, explicit posts root
+//   go run compress.go ../../Blog/posts/name/images — process one images dir
+//   go run compress.go ../../Blog/static/images — process static images dir
+//   go run compress.go -f [path]                — force recompress, ignoring existing output
 //
 // Flags:
-//   -f   Force mode — clears images/ and recompresses everything from raw/
-//        Without -f, files that already have a compressed output in images/ are skipped
+//   -f   Force mode — clears output dir and recompresses everything from raw/
+//        Without -f, files that already have a compressed output are skipped
 //
-// Directory structure expected:
-//   posts/
-//     postname/
-//       images/
-//         raw/    ← source files live here (never touched)
-//                 ← compressed output is placed directly in images/
+// Accepted directory layouts:
+//
+//   Point directly to an images dir:
+//     images/
+//       raw/    ← source files
+//               ← compressed output placed here
+//
+//   Point to a parent dir — each subdir that has images/ with raw/ inside is processed:
+//     posts/
+//       postname/
+//         images/
+//           raw/
 //
 // Behavior:
-//   1. Skips files whose output already exists in images/ (unless -f is set)
-//   2. With -f: clears all files in images/ (not raw/, not subdirs) before compressing
-//   3. Reads source files from images/raw/
+//   1. Skips files whose output already exists (unless -f is set)
+//   2. With -f: clears all files in the output dir (not raw/, not subdirs) before compressing
+//   3. Reads source files from raw/
 //   4. Compresses images  → WebP  (EXIF orientation baked in, resized if needed)
 //   5. Compresses videos  → H.264 MP4 (rotation baked in)
-//   6. Places output in images/ — raw/ is left untouched
+//   6. Places output alongside raw/ — raw/ is left untouched
 
 package main
 
@@ -44,7 +51,7 @@ import (
 
 const (
 	webpQuality       = 82
-	maxImageWidth     = 1600 // px — images wider than this are downscaled
+	maxImageWidth     = 1000 // px — images wider than this are downscaled
 	videoCRF          = "23"
 	videoPreset       = "slow"
 	videoAudioBitrate = "128k"
@@ -279,32 +286,40 @@ func clearDir(dir string) error {
 	return nil
 }
 
-// ── Process a single post ─────────────────────────────────────────────────────
+// ── Process an images directory ───────────────────────────────────────────────
 
-func processPost(postDir string, force bool) (totalErrors []string) {
-	imagesDir := filepath.Join(postDir, "images")
+// imagesDirLabel returns a display label for an images dir. When the dir is
+// named "images" the parent name is prepended to distinguish multiple targets.
+func imagesDirLabel(path string) string {
+	base := filepath.Base(path)
+	if base == "images" {
+		return filepath.Base(filepath.Dir(path)) + "/images"
+	}
+	return base
+}
+
+func processImagesDir(imagesDir string, force bool) (totalErrors []string) {
+	label := imagesDirLabel(imagesDir)
 	srcDir := filepath.Join(imagesDir, "raw")
 
-	// Verify raw/ exists and has files
 	images, videos, err := collectFiles(srcDir)
 	if err != nil {
-		return []string{fmt.Sprintf("%s: cannot read raw/: %v", filepath.Base(postDir), err)}
+		return []string{fmt.Sprintf("%s: cannot read raw/: %v", label, err)}
 	}
 	total := len(images) + len(videos)
 	if total == 0 {
 		fmt.Printf("  %s %s — no source files found, skipping\n",
-			colorize(yellow, "⚠"), filepath.Base(postDir))
+			colorize(yellow, "⚠"), label)
 		return nil
 	}
 
-	fmt.Printf("\n%s\n  Post: %s\n", hr(), filepath.Base(postDir))
+	fmt.Printf("\n%s\n  %s\n", hr(), label)
 
-	// In force mode, wipe existing output first
 	if force {
 		if err := clearDir(imagesDir); err != nil {
-			return []string{fmt.Sprintf("%s: failed to clear images/: %v", filepath.Base(postDir), err)}
+			return []string{fmt.Sprintf("%s: failed to clear output dir: %v", label, err)}
 		}
-		fmt.Printf("  Cleared images/ — force recompressing %d file(s) from raw/\n", total)
+		fmt.Printf("  Cleared output — force recompressing %d file(s) from raw/\n", total)
 	} else {
 		fmt.Printf("  Checking %d file(s) from raw/ — skipping existing output\n", total)
 	}
@@ -346,7 +361,7 @@ func processPost(postDir string, force bool) (totalErrors []string) {
 		case r.err != nil:
 			fmt.Printf("  %s %-40s %s\n",
 				colorize(red, "✗"), r.filename, colorize(red, r.err.Error()))
-			totalErrors = append(totalErrors, filepath.Base(postDir)+"/"+r.filename+": "+r.err.Error())
+			totalErrors = append(totalErrors, label+"/"+r.filename+": "+r.err.Error())
 		case r.skipped:
 			fmt.Printf("  %s %-40s already exists\n",
 				colorize(yellow, "–"), r.filename)
@@ -360,12 +375,12 @@ func processPost(postDir string, force bool) (totalErrors []string) {
 	return totalErrors
 }
 
-// ── Resolve target posts ──────────────────────────────────────────────────────
-// Returns a list of post directories to process based on the argument provided.
-//   - No arg / posts root → all subdirectories of postsDir
-//   - Single post dir     → just that directory
+// ── Resolve targets ───────────────────────────────────────────────────────────
+// Returns a list of images directories (each containing raw/) to process.
+//   - Target has raw/ directly → single images dir
+//   - Otherwise → enumerate subdirs; collect those whose images/ subdir has raw/
 
-func resolvePostDirs(arg string) ([]string, error) {
+func resolveTargets(arg string) ([]string, error) {
 	postsRoot, _ := filepath.Abs(defaultPostsDir)
 
 	target := postsRoot
@@ -378,29 +393,30 @@ func resolvePostDirs(arg string) ([]string, error) {
 		return nil, fmt.Errorf("'%s' is not a valid directory", target)
 	}
 
-	// If the target looks like the posts root (has no images/raw inside it directly),
-	// treat it as the posts root and enumerate subdirectories.
-	srcCheck := filepath.Join(target, "images", "raw")
-	if _, err := os.Stat(srcCheck); os.IsNotExist(err) {
-		// Treat as posts root — collect all subdirectories
-		entries, err := os.ReadDir(target)
-		if err != nil {
-			return nil, err
-		}
-		var posts []string
-		for _, e := range entries {
-			if e.IsDir() {
-				posts = append(posts, filepath.Join(target, e.Name()))
-			}
-		}
-		if len(posts) == 0 {
-			return nil, fmt.Errorf("no post subdirectories found in %s", target)
-		}
-		return posts, nil
+	// Target is an images dir (raw/ lives directly inside)
+	if _, err := os.Stat(filepath.Join(target, "raw")); err == nil {
+		return []string{target}, nil
 	}
 
-	// Target is a single post directory
-	return []string{target}, nil
+	// Enumerate subdirs and collect their images/ dirs that have raw/
+	entries, err := os.ReadDir(target)
+	if err != nil {
+		return nil, err
+	}
+	var dirs []string
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		imagesDir := filepath.Join(target, e.Name(), "images")
+		if _, err := os.Stat(filepath.Join(imagesDir, "raw")); err == nil {
+			dirs = append(dirs, imagesDir)
+		}
+	}
+	if len(dirs) == 0 {
+		return nil, fmt.Errorf("no images/ directories with raw/ found under %s", target)
+	}
+	return dirs, nil
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -416,7 +432,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	postDirs, err := resolvePostDirs(arg)
+	imageDirs, err := resolveTargets(arg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorize(red, "✗ "+err.Error()))
 		os.Exit(1)
@@ -426,11 +442,11 @@ func main() {
 	if *force {
 		mode = "force"
 	}
-	fmt.Printf("\n%s\n  compress [%s] — %d post(s) to process\n", hr(), mode, len(postDirs))
+	fmt.Printf("\n%s\n  compress [%s] — %d target(s)\n", hr(), mode, len(imageDirs))
 
 	var allErrors []string
-	for _, dir := range postDirs {
-		errs := processPost(dir, *force)
+	for _, dir := range imageDirs {
+		errs := processImagesDir(dir, *force)
 		allErrors = append(allErrors, errs...)
 	}
 

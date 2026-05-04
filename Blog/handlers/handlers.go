@@ -154,6 +154,18 @@ func (h *Handlers) PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// AboutHandler serves the about page
+func (h *Handlers) AboutHandler(w http.ResponseWriter, r *http.Request) {
+	data := map[string]interface{}{
+		"Title": "About - Layden Blackwell",
+	}
+
+	if err := h.Templates.ExecuteTemplate(w, "about.html", data); err != nil {
+		log.Printf("Error rendering about: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
 // GalleryHandler serves the gallery page for a post
 func (h *Handlers) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
@@ -197,3 +209,5 @@ func (h *Handlers) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
+
+//.

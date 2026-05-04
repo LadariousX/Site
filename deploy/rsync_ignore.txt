@@ -1,2 +1,7 @@
 *.exe
 **/raw/
+*.DS_Store
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/data/

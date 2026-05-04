@@ -10,7 +10,7 @@
 
       <div>
         {{if gt (len .Post.Images) 1}}
-        <a href="/posts/{{.Post.Slug}}/gallery" class="gallery-button">Gallery&nearrow;</a>
+        <a href="/posts/{{.Post.Slug}}/gallery" class="gallery-button">Gallery</a>
         {{end}}
 
         {{if .Post.Has3DModel}}
@@ -39,7 +39,9 @@
   <div class="post-body">
     {{.Post.BodyHTML}}
   </div>
-
+  <div style="display: flex; justify-content: right;">
+  <a href="#site-header" class="gallery-button">Back to top</a>
+  </div>
   {{if .Post.Has3DModel}}
   <div class="post-3d-models">
     <h2 id="3d-preview">3D Preview</h2>

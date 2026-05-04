@@ -74,6 +74,7 @@ func main() {
 
 	// Page routes
 	mux.HandleFunc("GET /{$}", h.IndexHandler)
+	mux.HandleFunc("GET /about", h.AboutHandler)
 	mux.HandleFunc("GET /posts/{slug}", h.PostHandler)
 	mux.HandleFunc("GET /posts/{slug}/gallery", h.GalleryHandler)
 
