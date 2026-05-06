@@ -46,7 +46,7 @@
   <div class="post-3d-models">
     <h2 id="3d-preview">3D Preview</h2>
     {{range .Post.Files}}
-      {{if hasSuffix . ".gltf"}}
+      {{if or (hasSuffix . ".gltf") (hasSuffix . ".glb")}}
       <div class="model-viewer-container">
         <model-viewer
           src="/post-files/{{.}}" alt="3D Model"
@@ -81,7 +81,7 @@
       </thead>
       <tbody>
         {{range .Post.Files}}
-          {{if and (not (hasSuffix . ".gltf")) (not (hasSuffix . "repo.zip"))}}
+          {{if and (not (hasSuffix . ".gltf")) (not (hasSuffix . ".glb")) (not (hasSuffix . "repo.zip"))}}
           <tr>
             <td class="file-icon-cell">
               {{if hasSuffix . ".zip"}}
@@ -116,9 +116,11 @@
 </head>
 <body>
   {{template "header" .}}
-  <main>
-    {{template "post-content" .}}
-  </main>
+  <div class="page-root">
+    <main>
+      {{template "post-content" .}}
+    </main>
+  </div>
   {{template "footer" .}}
   <script src="/Blog/static/blog.js"></script>
 </body>

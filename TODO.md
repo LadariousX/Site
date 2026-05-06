@@ -1,7 +1,7 @@
 [//]: # (TODO:)
 
 ## blog ideas
-- change fonts, current ones don't load in till later
+- change fonts, current ones don't load in till later, remove unused
 - pin posts
 - 3d preview still slow
 

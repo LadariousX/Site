@@ -89,9 +89,11 @@
 </head>
 <body>
 {{template "header" .}}
-<main>
-    {{template "about-content" .}}
-</main>
+<div class="page-root">
+    <main>
+        {{template "about-content" .}}
+    </main>
+</div>
 {{template "footer" .}}
 </body>
 </html>

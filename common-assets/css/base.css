@@ -7,7 +7,7 @@
   /* Colors */
   --bg: #E8E9EB;
   --bg-raised: #E4E4E0;
-  --header-bg: #E4E4E0;
+  --header-bg: #E4E4E0; /* also change in head.html */
 
   --border: lch(from var(--bg-raised) calc(l - 5) c h);
   --border-hi: lch(from var(--border) calc(l + 10) c h);
@@ -46,15 +46,14 @@
 }
 
 html {
+  background-color: var(--header-bg);
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  background-color: var(--header-bg);
 }
 
 body {
-  background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
   line-height: 1.5;
@@ -62,6 +61,18 @@ body {
   overflow-x: hidden;
   max-width: 100vw;
 }
+
+.page-root {
+  background: var(--bg);
+}
+
+.container {
+  max-width: var(--max-wide);
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2.5rem);
+}
+
+
 
 /* ============================================
    Typography
@@ -110,9 +121,11 @@ a:hover {
 
 code {
   font-family: var(--font-heading);
-  font-size: 0.9em;
+  font-size: 0.8rem;
+  /* line height too high and font not monospaced*/
   background: var(--bg-code);
-  color: var(--link);
+  /*color: var(--link);*/
+  color: orange;
   padding: 0.2em 0.4em;
   border-radius: var(--radius);
 }
@@ -207,14 +220,15 @@ td {
 .site-nav {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-
+  gap: 1rem;
   line-height: 1;
   font-family: var(--font-heading);
   font-size: 0.9rem;
   font-weight: 700;
+  padding-right: 5px;
 }
 
+/* hamburger menu not really */
 /*@media (max-width: 480px) {*/
   /*.site-header {*/
   /*  flex-direction: column;*/
@@ -231,12 +245,6 @@ td {
   font-size: 1rem;
   color: var(--text-dim);
   font-weight: 500;
-}
-
-.container {
-  max-width: var(--max-wide);
-  margin: 0 auto;
-  padding: clamp(1rem, 3vw, 2.5rem);
 }
 
 /* ============================================

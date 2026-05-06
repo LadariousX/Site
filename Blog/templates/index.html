@@ -38,9 +38,11 @@
 </head>
 <body>
   {{template "header" .}}
-  <main>
-    {{template "index-content" .}}
-  </main>
+  <div class="page-root">
+    <main>
+      {{template "index-content" .}}
+    </main>
+  </div>
   {{template "footer" .}}
 </body>
 </html>

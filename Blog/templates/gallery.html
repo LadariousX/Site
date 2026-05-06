@@ -34,9 +34,11 @@
 </head>
 <body>
   {{template "header" .}}
-  <main>
-    {{template "gallery-content" .}}
-  </main>
+  <div class="page-root">
+    <main>
+      {{template "gallery-content" .}}
+    </main>
+  </div>
   {{template "footer" .}}
   <script src="/Blog/static/blog.js"></script>
 </body>

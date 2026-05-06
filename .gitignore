@@ -17,6 +17,8 @@ Blog/data/*
 Blog/posts/*
 **/raw/*
 
+/deploy/etc
+
 # macOS
 .DS_Store
 .idea/

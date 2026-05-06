@@ -88,6 +88,15 @@ func (h *Handlers) PostHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error decoding files for post %s: %v", slug, err)
 	}
 
+	// Strip system files
+	filtered := files[:0]
+	for _, f := range files {
+		if f != ".DS_Store" {
+			filtered = append(filtered, f)
+		}
+	}
+	files = filtered
+
 	// Sort files: .zip files first, then others
 	sort.Slice(files, func(i, j int) bool {
 		iIsZip := len(files[i]) >= 4 && files[i][len(files[i])-4:] == ".zip"
@@ -106,7 +115,7 @@ func (h *Handlers) PostHandler(w http.ResponseWriter, r *http.Request) {
 	hasDownloadableFiles := false
 	hasRepoZip := false
 	for _, file := range files {
-		if len(file) >= 5 && file[len(file)-5:] == ".gltf" {
+		if (len(file) >= 5 && file[len(file)-5:] == ".gltf") || (len(file) >= 4 && file[len(file)-4:] == ".glb") {
 			has3DModel = true
 		} else if len(file) >= 8 && file[len(file)-8:] == "repo.zip" {
 			hasRepoZip = true
@@ -143,7 +152,6 @@ func (h *Handlers) PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		//"Title": post.Title + " - Dev Blog",
 		"Title": post.Title,
 		"Post":  postView,
 	}
@@ -200,7 +208,7 @@ func (h *Handlers) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title": post.Title + " - Gallery - Dev Blog",
+		"Title": post.Title + " - Gallery",
 		"Post":  postView,
 	}
 
