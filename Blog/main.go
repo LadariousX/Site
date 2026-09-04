@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"Blog/db"
@@ -18,7 +19,7 @@ func main() {
 	dbPath := getEnv("DB_PATH", "data/Blog.db")
 	backupDir := getEnv("BACKUP_DIR", "data/backups")
 	postsDir := getEnv("POSTS_DIR", "posts")
-	addr := getEnv("ADDR", "0.0.0.0:8080")
+	addr := getEnv("ADDR", "0.0.0.0:5001")
 
 	// Open database
 	database, err := db.Open(dbPath)
@@ -44,13 +45,18 @@ func main() {
 		"basename": func(path string) string {
 			return filepath.Base(path)
 		},
+		"posterPath": func(path string) string {
+			dir, file := filepath.Split(path)
+			stem := strings.TrimSuffix(file, filepath.Ext(file))
+			return filepath.Join(dir, "thumbs", stem+".webp")
+		},
 	}
 
 	// Load common-assets/templates/base.html first
 	tmpl := template.Must(template.New("").Funcs(funcMap).ParseGlob("../common-assets/templates/*.html"))
 	// Then load partials (like carousel)
 	tmpl = template.Must(tmpl.ParseGlob("templates/partials/*.html"))
-	// Finally load page templates (index, post, gallery)
+	// Finally, load page templates (index, post, gallery)
 	tmpl = template.Must(tmpl.ParseGlob("templates/*.html"))
 
 	// Initialize handlers

@@ -7,7 +7,7 @@
   /* Colors */
   --bg: #E8E9EB;
   --bg-raised: #E4E4E0;
-  --header-bg: #E4E4E0; /* also change in head.html */
+
 
   --border: lch(from var(--bg-raised) calc(l - 5) c h);
   --border-hi: lch(from var(--border) calc(l + 10) c h);
@@ -18,6 +18,7 @@
   --text-heading: #424242ff;
 
   --accent: #EE5A58;
+  /*--accent: rgba(167,38,255,1);*/
   --link: lch(from var(--accent) calc(l + 10) c h);
   --bg-code: var(--bg-raised);
 
@@ -46,7 +47,7 @@
 }
 
 html {
-  background-color: var(--header-bg);
+  background-color: var(--bg-raised);
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -195,7 +196,7 @@ td {
   align-items: center;
   padding: clamp(0.5rem, 1vw, 1.5rem);
   border-bottom: 1px solid var(--border);
-  background: var(--header-bg);
+  background: var(--bg-raised);
 }
 
 .site-logo { /* Layden Blackwell */

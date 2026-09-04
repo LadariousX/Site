@@ -56,6 +56,10 @@ const (
 	videoPreset       = "slow"
 	videoAudioBitrate = "128k"
 
+	posterQuality  = 80
+	posterMaxWidth = 600 // px — video poster thumbnails downscaled to this width
+	postersSubdir  = "thumbs"
+
 	defaultPostsDir = "/Users/layden/Development/Site/Blog/posts"
 )
 
@@ -200,6 +204,41 @@ func compressImage(src, destDir string, force bool) result {
 	return result{filename: filename, before: before, after: fileSize(dest)}
 }
 
+// ── Video poster thumbnails ───────────────────────────────────────────────────
+// Extracts a single frame from a compressed video as a WebP poster image, so
+// gallery pages can show a static thumbnail instead of loading video data
+// client-side. Posters are written to <destDir>/thumbs/<stem>.webp.
+
+func generatePoster(video, destDir, stem string, force bool) error {
+	posterDir := filepath.Join(destDir, postersSubdir)
+	if err := os.MkdirAll(posterDir, 0755); err != nil {
+		return err
+	}
+	dest := filepath.Join(posterDir, stem+".webp")
+
+	if !force {
+		if _, err := os.Stat(dest); err == nil {
+			return nil
+		}
+	}
+
+	cmd := exec.Command("ffmpeg",
+		"-y",
+		"-ss", "0.1",
+		"-i", video,
+		"-frames:v", "1",
+		"-vf", fmt.Sprintf("scale='min(%d,iw)':-2", posterMaxWidth),
+		"-c:v", "libwebp",
+		"-quality", strconv.Itoa(posterQuality),
+		dest,
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		os.Remove(dest)
+		return fmt.Errorf("ffmpeg (poster): %w\n%s", err, string(out))
+	}
+	return nil
+}
+
 // ── Video compression ─────────────────────────────────────────────────────────
 
 func compressVideo(src, destDir string, force bool) result {
@@ -210,6 +249,9 @@ func compressVideo(src, destDir string, force bool) result {
 
 	if !force {
 		if _, err := os.Stat(dest); err == nil {
+			if err := generatePoster(dest, destDir, stem, force); err != nil {
+				return result{filename: filename, err: err}
+			}
 			return result{filename: filename, skipped: true}
 		}
 	}
@@ -239,6 +281,10 @@ func compressVideo(src, destDir string, force bool) result {
 			err: fmt.Errorf("ffmpeg: %w\n%s", err, string(out))}
 	}
 
+	if err := generatePoster(dest, destDir, stem, force); err != nil {
+		return result{filename: filename, before: before, after: fileSize(dest), err: err}
+	}
+
 	return result{filename: filename, before: before, after: fileSize(dest)}
 }
 
@@ -249,7 +295,7 @@ func collectFiles(dir string) (images, videos []string, err error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	imageExts := map[string]bool{".jpg": true, ".jpeg": true, ".png": true}
+	imageExts := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".heic": true}
 	videoExts := map[string]bool{".mp4": true, ".mov": true}
 
 	for _, e := range entries {

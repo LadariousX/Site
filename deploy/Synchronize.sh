@@ -8,15 +8,7 @@ else
     exit 1
 fi
 
-IGNORE_PATTERNS=(
-    "*.exe"
-    "**/raw/"
-    "*.DS_Store"
-    "**/*.db"
-    "**/*.db-shm"
-    "**/*.db-wal"
-    "**/data/"
-)
+EXCLUDE_FROM="$(dirname "$0")/rsync_ignore.txt"
 
 # --- SELECTION MENU ---
 echo "---------------------------------------"
@@ -58,11 +50,6 @@ case $CHOICE in
         ;;
 esac
 
-EXCLUDE_CMD=()
-for pattern in "${IGNORE_PATTERNS[@]}"; do
-    EXCLUDE_CMD+=("--exclude=$pattern")
-done
-
 # --- EXECUTION ---
 echo "---------------------------------------"
 echo " Executing $NAME..."
@@ -74,7 +61,7 @@ if [[ "$SYNC_REMOTE" == true ]]; then
 
     rsync -avzP --delete \
         -e "ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=3" \
-        "${EXCLUDE_CMD[@]}" \
+        --exclude-from="$EXCLUDE_FROM" \
         "$SRC" "$DEST"
 
     echo "---------------------------------------"

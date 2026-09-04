@@ -203,15 +203,8 @@ function initLightbox() {
   const galleryGrid = document.querySelector('.gallery-grid');
   if (!galleryGrid) return;
 
-  // Force video thumbnails to load first frame
-  const galleryVideos = document.querySelectorAll('.gallery-thumb video');
-  galleryVideos.forEach(video => {
-    // Wait for metadata to load before seeking
-    video.addEventListener('loadedmetadata', function() {
-      this.currentTime = 0.1;
-    });
-    video.load();
-  });
+  // Video thumbnails are pre-rendered poster images (see compressor), so no
+  // client-side video loading is needed here.
 
   // Create lightbox markup
   const lightbox = document.createElement('div');

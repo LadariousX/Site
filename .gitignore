@@ -22,3 +22,5 @@ Blog/posts/*
 # macOS
 .DS_Store
 .idea/
+
+Tools/tools/Survey-bot/*
