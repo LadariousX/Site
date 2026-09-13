@@ -23,4 +23,6 @@ type Post struct {
 	CoverImage  string // first image, denormalized
 	Files       string `gorm:"type:text"` // JSON array of file paths
 	RepoURL     string // GitHub repo URL from frontmatter
+	Pinned      bool   `gorm:"not null;default:false"` // shown first on the index, ahead of publish date
+	Hidden      bool   `gorm:"not null;default:false"` // excluded from the index entirely
 }

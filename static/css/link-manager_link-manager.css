@@ -1,0 +1,496 @@
+/* The browser's default [hidden]{display:none} loses to ANY author rule
+   that sets display on the same element (e.g. .field-group{display:flex}),
+   regardless of specificity — author styles always beat user-agent styles.
+   Several classes below set display explicitly, which silently broke
+   hidden="" on elements like #mode-switch and #url-field. This one
+   !important rule is the standard fix and covers every current and future
+   case in this file. */
+[hidden] {
+  display: none !important;
+}
+
+.lm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.lm-form {
+  /*max-width: 480px;*/
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.url-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.url-row input {
+  flex: 1;
+}
+
+.url-prefix {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+input[type="url"],
+input[type="text"],
+input[type="password"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  transition: border-color var(--transition);
+}
+
+input[type="url"]:focus,
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--link);
+}
+
+.expiration-row .expiration-inputs {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 480px;
+}
+
+.expiration-inputs input[type="number"] {
+  max-width: 6rem;
+}
+
+.expiration-inputs select {
+  flex: 1;
+}
+
+.btn-primary {
+  font-size: 1rem;
+  padding: 0.65rem 1.5rem;
+  align-self: flex-start;
+  margin-top: 1rem;
+}
+
+.mode-switch {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.mode-btn {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.4rem 1rem;
+  border: none;
+  background: var(--bg-raised);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.mode-btn.active {
+  background: var(--link);
+  color: var(--bg);
+}
+
+.drop-zone {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  padding: 1.5rem;
+  text-align: center;
+  font-family: var(--font-heading);
+  color: var(--text-muted);
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.drop-zone.dragover {
+  border-color: var(--link);
+  background: var(--bg);
+}
+
+.drop-zone p {
+  margin: 0;
+}
+
+progress {
+  width: 100%;
+  height: 0.6rem;
+  accent-color: var(--link);
+}
+
+.file-remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius);
+  transition: color var(--transition), background var(--transition);
+}
+
+.file-remove-btn:hover {
+  color: var(--accent);
+  background: var(--bg-raised);
+}
+
+.form-status {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  max-width: 480px;
+}
+
+.form-status.success {
+  border-color: #4caf50;
+  color: #2e7d32;
+  background: #f1f8f1;
+}
+
+.form-status.error {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #fdf3f3;
+}
+
+.form-status.pending {
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: var(--bg-raised);
+}
+
+.code-display {
+  width: fit-content;
+  min-width: min(280px, 100%);
+  max-width: min(92vw, 560px);
+  margin: clamp(2rem, 6vw, 4rem) auto 1.5rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+/* Row layout for the wget/CLI command display (a <pre> + a copy button
+   side by side) — kept separate from .code-display so its flex-row rules
+   don't leak into other .code-display usages (e.g. the short-link summary). */
+.cli-code-display {
+  margin-top: 0.75rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-right: 0.75rem;
+}
+
+.cli-code-display pre {
+  margin-bottom: 0;
+}
+
+.cli-code-display .copy-btn {
+  margin-left: auto;
+}
+
+.code-label {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.code-value-box {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.code-value {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-heading);
+  word-break: break-all;
+
+}
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.copy-btn-icon {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  background-color: currentColor;
+  -webkit-mask: url('/static/images/copy.svg') no-repeat center / contain;
+  mask: url('/static/images/copy.svg') no-repeat center / contain;
+}
+
+.summary-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+#qr-container {
+  align-self: stretch;
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
+#qr-container img,
+#qr-container canvas {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 0.5rem;
+}
+
+.security-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.password-input-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.password-input-row input {
+  flex: 1;
+}
+
+.pw-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.pw-toggle:hover {
+  border-color: var(--link);
+  color: var(--link);
+}
+
+.field-error {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: var(--accent);
+  margin-top: 0.1rem;
+}
+
+.field-error a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.retention-text {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0.4rem 0 0;
+  max-width: 480px;
+}
+
+.link-inline {
+  background: none;
+  border: none;
+  color: var(--link);
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.exp-steppers {
+  display: flex;
+  flex-direction: row;
+  gap: 0.25rem;
+  align-self: stretch;
+}
+
+.exp-step {
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius);
+  background: var(--link);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+
+.exp-step:hover {
+  opacity: 0.85;
+}
+
+.exp-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.exp-step-icon {
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--bg);
+  -webkit-mask: url('/static/images/arrow.svg') no-repeat center / contain;
+  mask: url('/static/images/arrow.svg') no-repeat center / contain;
+}
+
+.exp-step-icon-down {
+  transform: rotate(180deg);
+}
+
+.unit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.unit-toggle:hover {
+  border-color: var(--link);
+  color: var(--link);
+}
+
+.unit-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.unit-dots {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.unit-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background var(--transition);
+}
+
+.unit-dot.active {
+  background: var(--link);
+}
+
+#exp-value {
+  -moz-appearance: textfield;
+}
+
+#exp-value::-webkit-inner-spin-button,
+#exp-value::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.file-row-msg td {
+  padding-top: 0;
+  padding-bottom: 0.5rem;
+}
+
+.file-download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius);
+  transition: color var(--transition), background var(--transition);
+}
+
+.file-download-btn:hover {
+  color: var(--link);
+  background: var(--bg-raised);
+}
+
+.file-download-btn.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.signin-prompt-text {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}

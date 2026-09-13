@@ -13,8 +13,9 @@ go.work
 *.db-shm
 *.db-wal
 
-Blog/data/*
-Blog/posts/*
+blog/data/*
+blog/posts/*
+/db/
 **/raw/*
 
 /deploy/etc
@@ -23,4 +24,4 @@ Blog/posts/*
 .DS_Store
 .idea/
 
-Tools/tools/Survey-bot/*
+.claude

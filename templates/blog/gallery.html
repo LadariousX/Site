@@ -1,0 +1,46 @@
+{{define "gallery-styles"}}
+{{end}}
+
+{{define "gallery-content"}}
+<div class="container">
+  <a href="/posts/{{.Post.Slug}}" class="gallery-button" style="margin-bottom: 1.5rem;">Back to post</a>
+
+  <h1>{{.Post.Title}}</h1>
+
+  <div class="gallery-grid">
+    {{range $index, $media := .Post.Images}}
+    <div class="gallery-thumb" data-index="{{$index}}" data-src="/post-images/{{$media}}">
+      {{if or (hasSuffix $media ".mov") (hasSuffix $media ".mp4") (hasSuffix $media ".webm") (hasSuffix $media ".MOV") (hasSuffix $media ".MP4")}}
+      <img src="/post-images/{{posterPath $media}}" alt="Video {{add $index 1}}" loading="eager">
+        <div class="video-badge">▶</div>
+      {{else}}
+        <img src="/post-images/{{$media}}" alt="Media {{add $index 1}}" loading="eager">
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+
+  <div class="gallery-counter">{{len .Post.Images}} media files</div>
+</div>
+{{end}}
+
+{{define "gallery.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "head" .}}
+  <title>{{.Post.Title}} - Gallery</title>
+  {{template "gallery-styles" .}}
+</head>
+<body>
+  {{template "header" .}}
+  <div class="page-root">
+    <main>
+      {{template "gallery-content" .}}
+    </main>
+  </div>
+  {{template "footer" .}}
+  <script src="/static/js/blog_blog.js"></script>
+</body>
+</html>
+{{end}}

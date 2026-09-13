@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-dev
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-app}
+      - POSTGRES_USER=${POSTGRES_USER:-site}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ../../db/postgres-dev:/var/lib/postgresql/data
+      - ../postgres/init-blog-db.sql:/docker-entrypoint-initdb.d/init-blog-db.sql:ro
+
+  site:
+    image: site:v1
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../../blog/posts:/app/blog/posts:ro
+      - ../../blog/data:/app/blog/data
+      - ../../db/link-manager-filedata-dev:/app/db/link-manager-filedata
+    env_file:
+      - ../../.env
+    environment:
+      - POSTGRES_HOST=postgres
+#      - SURVEY_BOT_BACKEND=http://survey-bot:3000
+    depends_on:
+      - postgres
+    restart: unless-stopped

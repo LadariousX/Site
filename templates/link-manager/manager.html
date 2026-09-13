@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "head" .}}
+  <title>{{if .EditMode}}Edit Link{{else}}Link Manager{{end}}</title>
+  <link rel="stylesheet" href="/static/css/link-manager_link-manager.css" />
+</head>
+<body>
+{{template "header" .}}
+<div class="page-root">
+  <main>
+    <div class="container">
+      <div class="lm-header">
+        <h1>{{if .EditMode}}Edit Link{{else}}Link Manager{{end}}</h1>
+        <div class="mode-switch" id="mode-switch">
+          <button type="button" class="mode-btn active" data-mode="link">URL</button>
+          <button type="button" class="mode-btn" data-mode="file">File</button>
+        </div>
+      </div>
+      <p>{{if .EditMode}}Update this link's destination, alias, expiration, or password.{{else}}Shorten a URL, or share files, behind an expiring, optionally password-protected link.{{end}}</p>
+
+      <div id="form-status" class="form-status" hidden></div>
+
+      <form id="link-form" class="lm-form" novalidate>
+        {{if not .EditMode}}
+        <p class="signin-prompt-text" id="signin-prompt" hidden>Sign in to associate an alias link with your account and you will be able to edit it later. <a href="/login?redirect=/link-manager">Sign In</a></p>
+        {{end}}
+        <div class="field-group" id="url-field">
+          <label for="url-input">URL</label>
+          <input type="url" id="url-input" placeholder="https://..." />
+          <span class="field-error" id="url-error" hidden></span>
+        </div>
+
+        <div class="field-group">
+          <label for="alias-input">Short link</label>
+          <div class="url-row">
+            <span class="url-prefix">{{.LinkHostDisplay}}</span>
+            <input type="text" id="alias-input" placeholder="auto-generated if blank" minlength="3" />
+          </div>
+          <span class="field-error" id="alias-error" hidden></span>
+        </div>
+
+        <div id="file-field" hidden>
+          <div id="drop-zone" class="drop-zone">
+            <p>Drag files here, or <button type="button" id="browse-btn" class="btn">Browse</button></p>
+            <input type="file" id="file-input" multiple hidden />
+          </div>
+          <span class="field-error" id="files-error" hidden></span>
+          <table class="files-table" id="staged-table" hidden>
+            <thead>
+              <tr class="files-table-header"><th>Name</th><th>Size</th><th>Progress</th><th></th><th></th></tr>
+            </thead>
+            <tbody id="staged-files"></tbody>
+          </table>
+        </div>
+
+        <div class="security-section">
+          <label class="checkbox-row" id="reset-exp-row" hidden>
+            <input type="checkbox" id="reset-exp-checkbox" />
+            Reset/modify expiration timer
+          </label>
+
+          <div class="field-group expiration-row">
+            <label for="exp-value">Expires in</label>
+            <div class="expiration-inputs">
+              <input type="number" id="exp-value" value="7" min="1" max="90" />
+              <div class="exp-steppers">
+                <button type="button" class="exp-step" data-dir="up" aria-label="Increase">
+                  <span class="exp-step-icon"></span>
+                </button>
+                <button type="button" class="exp-step" data-dir="down" aria-label="Decrease">
+                  <span class="exp-step-icon exp-step-icon-down"></span>
+                </button>
+              <button type="button" id="exp-unit-toggle" class="unit-toggle" data-unit="days" aria-label="Cycle expiration unit">
+                <span class="unit-label">days</span>
+                <span class="unit-dots">
+                  <span class="unit-dot" data-unit="days"></span>
+                  <span class="unit-dot" data-unit="hr"></span>
+                  <span class="unit-dot" data-unit="min"></span>
+                </span>
+              </button>
+              <button type="button" id="retention-link" class="link-inline">View retention and security info</button>
+              </div>
+            </div>
+            <p id="retention-policy-text" class="retention-text" hidden>
+                Retention: A link stops working the instant it expires; its files and database rows are then purged by an automatic sweep that runs about once a minute.<br>
+                Security: The access password is the max level of security offered. Serverside files are stored unencrypted.<br>
+            <span class="field-error" id="expiration-error" hidden></span>
+          </div>
+
+          <div class="field-group">
+            <label for="password-input">Access password (optional)</label>
+            <div class="password-input-row">
+              <input type="password" id="password-input" placeholder="Leave blank for no password" />
+              <button type="button" class="pw-toggle" data-target="password-input" aria-label="Show password">Show</button>
+            </div>
+            <span class="field-error" id="password-error" hidden></span>
+          </div>
+        </div>
+
+        <div id="turnstile-container"></div>
+        <button type="submit" id="create-btn" class="btn btn-primary">{{if .EditMode}}Update{{else}}Create Short Link{{end}}</button>
+      </form>
+    </div>
+  </main>
+</div>
+{{template "footer" .}}
+
+<script>
+  window.BOOT = {
+    editMode: {{.EditMode}},
+    signedIn: {{.SignedIn}},
+    linkId: {{.LinkID}},
+    alias: {{.Alias}},
+    type: {{.Type}},
+    destination: {{.Destination}},
+    expiresAtUnix: {{.ExpiresAtUnix}},
+    hasPassword: {{.HasPassword}},
+    files: {{.FilesJSON}},
+    turnstileSiteKey: {{.TurnstileSiteKey}}
+  };
+</script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstile&render=explicit" defer></script>
+<script src="/static/js/link-manager_link-manager.js"></script>
+</body>
+</html>

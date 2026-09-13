@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "head" .}}
+  <title>Locked</title>
+  <link rel="stylesheet" href="/static/css/link-manager_link-manager.css" />
+</head>
+<body>
+{{template "header" .}}
+<div class="page-root">
+  <main>
+    <div class="container">
+      <h1>Password required</h1>
+      {{if .Error}}<div class="form-status error">{{.Error}}</div>{{end}}
+      <form method="POST" action="/l/{{.Alias}}" class="lm-form">
+        <div class="field-group">
+          <label for="password-input">Password</label>
+          <div class="password-input-row">
+            <input type="password" id="password-input" name="password" required autofocus />
+            <button type="button" class="pw-toggle" data-target="password-input" aria-label="Show password">Show</button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Unlock</button>
+      </form>
+    </div>
+  </main>
+</div>
+{{template "footer" .}}
+<script>
+  document.querySelectorAll('.pw-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      const showing = target.type === 'text';
+      target.type = showing ? 'password' : 'text';
+      btn.textContent = showing ? 'Show' : 'Hide';
+    });
+  });
+</script>
+</body>
+</html>

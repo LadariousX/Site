@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "head" .}}
+  <title>Your Short Link</title>
+  <link rel="stylesheet" href="/static/css/link-manager_link-manager.css" />
+</head>
+<body>
+{{template "header" .}}
+<div class="page-root">
+  <main>
+    <div class="container">
+      <h1>Your short link is ready</h1>
+
+      <div class="code-display">
+        <span class="code-label">Your short link</span>
+        <div class="code-value-box">
+            <span id="summary-url" class="code-value">{{.ShortURL}}</span>
+            <button type="button" id="copy-btn" class="btn copy-btn">
+                <span class="copy-btn-icon"></span>
+            </button>
+        </div>
+        <div class="summary-actions">
+          <button type="button" id="share-btn" class="btn" hidden>Share</button>
+<!--           <button type="button" id="copy-btn" class="btn copy-btn"> -->
+<!--             <span class="copy-btn-icon"></span> -->
+<!--           </button> -->
+        </div>
+        <div id="qr-container"></div>
+      </div>
+    </div>
+  </main>
+</div>
+{{template "footer" .}}
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+  const summaryUrl = document.getElementById('summary-url');
+  const shareBtn = document.getElementById('share-btn');
+  const copyBtn = document.getElementById('copy-btn');
+  const copyBtnLabel = copyBtn.querySelector('.copy-btn-label');
+  const qrContainer = document.getElementById('qr-container');
+
+  new QRCode(qrContainer, { text: summaryUrl.textContent, width: 300, height: 300 });
+  shareBtn.hidden = !navigator.share;
+
+  shareBtn.addEventListener('click', () => {
+    navigator.share({ title: 'Short link', url: summaryUrl.textContent }).catch(() => {});
+  });
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard
+      .writeText(summaryUrl.textContent)
+      .then(() => {
+        copyBtnLabel.textContent = 'Copied!';
+        setTimeout(() => { copyBtnLabel.textContent = 'Copy'; }, 1500);
+      })
+      .catch(() => {});
+  });
+</script>
+</body>
+</html>

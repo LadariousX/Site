@@ -6,8 +6,6 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
-      # default: the other services in this file.
-      # shared-net: izzy-game, which lives in the ICS-orientation-izzyRun project.
       - default
       - shared-net
 
@@ -17,27 +15,40 @@ services:
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
 
-  blog:
-    image: go-refresh:v1
+  site:
+    image: site:v1
     volumes:
-      - ../Blog:/workspace/Blog
-      - ../common-assets:/workspace/common-assets
-    working_dir: /workspace/Blog
-    restart: unless-stopped
-
-  tools:
-    image: go-refresh:v1
-    volumes:
-      - ../Tools:/workspace/Tools
-      - ../common-assets:/workspace/common-assets
-    working_dir: /workspace/Tools
+      - ../blog/posts:/app/blog/posts:ro
+      - ../blog/data:/app/blog/data
+      - ../db/link-manager-filedata:/app/db/link-manager-filedata
+    env_file:
+      - ../.env
     environment:
+      # Overrides .env's POSTGRES_HOST=localhost, which is only correct when
+      # running the Go binary directly on a host — inside this container,
+      # "postgres" is the compose service/DNS name for the postgres container.
+      - POSTGRES_HOST=postgres
       - SURVEY_BOT_BACKEND=http://survey-bot:3000
+    depends_on:
+      - postgres
     restart: unless-stopped
 
   survey-bot:
     image: survey-bot:v3
     restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-app}
+      - POSTGRES_USER=${POSTGRES_USER:-site}
+    volumes:
+      - ../db/postgres:/var/lib/postgresql/data
+      - ./postgres/init-blog-db.sql:/docker-entrypoint-initdb.d/init-blog-db.sql:ro
 
 # shared-net is created once on the host (docker network create shared-net) and
 # joined by both this stack and the ICS-orientation-izzyRun stack.

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "head" .}}
+  <title>Files</title>
+  <link rel="stylesheet" href="/static/css/link-manager_link-manager.css" />
+</head>
+<body>
+{{template "header" .}}
+<div class="page-root">
+  <main>
+    <div class="container">
+      <h1>Shared files</h1>
+      <p class="cli-hint">Download and unzip from the terminal:</p>
+      <div class="cli-code-display">
+        <pre class="cli-cmd"><code id="cli-cmd">mkdir -p {{.Alias}} && wget -O- {{if .HasPassword}}--http-user=x --http-password='PASSWORD' {{end}}{{.ShortLinkHost}}{{.Alias}} | tar -xf - -C {{.Alias}}</code></pre>
+        <button type="button" id="copy-btn" class="btn copy-btn">
+          <span class="copy-btn-icon"></span>
+<!--           <span class="copy-btn-label">Copy</span> -->
+        </button>
+      </div>
+      {{if .HasPassword}}<p class="cli-hint">Replace <code>PASSWORD</code> with the link's access password, username not required.</p>{{end}}
+      <table class="files-table">
+        <thead>
+          <tr class="files-table-header">
+            <th colspan="2">
+              {{.LinkHostDisplay}}{{.Alias}}
+              <span style="float: right;">
+                <a href="/l/{{.Alias}}/download" class="btn" download>Download All (zip)</a>
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Files}}
+          <tr>
+            <td class="file-icon-cell">📄</td>
+            <td class="file-name-cell"><a href="/l/{{$.Alias}}/{{.FileName}}" class="file-link" download>{{.FileName}}</a></td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+{{template "footer" .}}
+<script>
+  const copyBtn = document.getElementById('copy-btn');
+  const copyBtnLabel = copyBtn.querySelector('.copy-btn-label');
+  const cliCmd = document.getElementById('cli-cmd');
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard
+      .writeText(cliCmd.textContent)
+      .then(() => {
+        copyBtnLabel.textContent = 'Copied!';
+        setTimeout(() => { copyBtnLabel.textContent = 'Copy'; }, 1500);
+      })
+      .catch(() => {});
+  });
+</script>
+</body>
+</html>

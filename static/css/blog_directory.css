@@ -1,0 +1,40 @@
+
+.tool-box {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.tool-box > a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.tool-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  padding: 0.5rem 1rem;
+}
+
+.tool-item p {
+  margin-bottom: 0;
+  /*font-family: var(--font-heading);*/
+}
+
+/* Links nested inside a .tool-item (rather than wrapping the whole card,
+   like the Izzy Game box's separate leaderboard link) should match the
+   same "inherit the surrounding color" look as the card-wrapping anchors. */
+.tool-item a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.tool-item h3 {
+  margin: 0;
+  color: var(--link);
+
+  transition: color var(--transition);
+}

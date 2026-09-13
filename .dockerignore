@@ -1,0 +1,9 @@
+# Bind-mounted at runtime, not baked into the image — see deploy/site.dockerfile
+blog/posts
+blog/data
+**/raw/
+databases/link-manager-filedata/data
+
+.git
+.idea
+.DS_Store

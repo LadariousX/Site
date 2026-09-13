@@ -1,0 +1,34 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 400px;
+  margin: clamp(2rem, 8vw, 5rem) auto;
+}
+
+.login-form {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+#code-input {
+  font-family: monospace;
+  font-size: 1.4rem;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.code-submit-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.code-submit-row .btn-primary {
+  margin-top: 0;
+}

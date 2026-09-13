@@ -1,0 +1,36 @@
+{{define "header"}}
+<header class="site-header" id="site-header">
+    <a href="/dir#Tools" class="site-logo">Layden's Tools</a>
+
+    <div class="site-header-right">
+        <nav class="site-nav">
+            <a href="/dir">Directory</a>
+            <span id="auth-area"></span>
+        </nav>
+    </div>
+
+</header>
+<script>
+  fetch('/api/me').then(function (r) { return r.ok ? r.json() : {}; }).then(function (data) {
+    var area = document.getElementById('auth-area');
+    if (!area) return;
+    var link = document.createElement('a');
+    if (data && data.email) {
+      link.href = '/account';
+      link.className = 'auth-status';
+      var full = document.createElement('span');
+      full.className = 'auth-status-full';
+      full.textContent = 'Account';
+      var short = document.createElement('span');
+      short.className = 'auth-status-short';
+      short.textContent = 'Account';
+      link.appendChild(full);
+      link.appendChild(short);
+    } else {
+      link.href = '/login';
+      link.textContent = 'Sign In';
+    }
+    area.appendChild(link);
+  }).catch(function () {});
+</script>
+{{end}}

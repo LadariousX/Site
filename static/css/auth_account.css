@@ -1,0 +1,41 @@
+h2 {
+  margin-top: 2rem;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: var(--text-heading);
+}
+
+.account-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.account-table {
+  margin-top: 0.75rem;
+}
+
+.account-table td {
+  padding: 0.6rem 1rem;
+}
+
+.account-empty {
+  margin-top: 0.75rem;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.expired-badge {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 0.1rem 0.4rem;
+  text-transform: uppercase;
+}

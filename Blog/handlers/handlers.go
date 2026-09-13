@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"Blog/models"
+	"site/blog/models"
 
 	"gorm.io/gorm"
 )
@@ -17,14 +17,13 @@ type Handlers struct {
 	DB        *gorm.DB
 	Templates *template.Template
 	PostsDir  string
-	DBPath    string
-	BackupDir string
 }
 
 // IndexHandler serves the home page with all published posts
 func (h *Handlers) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	var posts []models.Post
-	result := h.DB.Where("status = ?", "published").Order("published_at DESC").Find(&posts)
+	result := h.DB.Where("status = ? AND hidden = ?", "published", false).
+		Order("pinned DESC, published_at DESC").Find(&posts)
 	if result.Error != nil {
 		log.Printf("Error fetching posts: %v", result.Error)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -50,12 +49,19 @@ func (h *Handlers) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title": "Layden Blackwell's Project Blog",
 		"Posts": postViews,
 	}
 
 	if err := h.Templates.ExecuteTemplate(w, "index.html", data); err != nil {
 		log.Printf("Error rendering index: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// DirHandler serves the directory page
+func (h *Handlers) DirHandler(w http.ResponseWriter, r *http.Request) {
+	if err := h.Templates.ExecuteTemplate(w, "directory.html", nil); err != nil {
+		log.Printf("Error rendering directory: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -152,8 +158,7 @@ func (h *Handlers) PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title": post.Title,
-		"Post":  postView,
+		"Post": postView,
 	}
 
 	if err := h.Templates.ExecuteTemplate(w, "post.html", data); err != nil {
@@ -164,11 +169,7 @@ func (h *Handlers) PostHandler(w http.ResponseWriter, r *http.Request) {
 
 // AboutHandler serves the about page
 func (h *Handlers) AboutHandler(w http.ResponseWriter, r *http.Request) {
-	data := map[string]interface{}{
-		"Title": "About - Layden Blackwell",
-	}
-
-	if err := h.Templates.ExecuteTemplate(w, "about.html", data); err != nil {
+	if err := h.Templates.ExecuteTemplate(w, "about.html", nil); err != nil {
 		log.Printf("Error rendering about: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
@@ -208,8 +209,7 @@ func (h *Handlers) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title": post.Title + " - Gallery",
-		"Post":  postView,
+		"Post": postView,
 	}
 
 	if err := h.Templates.ExecuteTemplate(w, "gallery.html", data); err != nil {

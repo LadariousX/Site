@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "head" .}}
+  <title>Your Account</title>
+  <link rel="stylesheet" href="/static/css/link-manager_link-manager.css" />
+  <link rel="stylesheet" href="/static/css/auth_account.css" />
+</head>
+<body>
+{{template "header" .}}
+<div class="page-root">
+  <main>
+    <div class="container">
+      <h1>Your Account</h1>
+      <div class="account-summary-row">
+        <p>{{.Email}} &mdash; member since {{.CreatedAt.Format "Jan 2, 2006"}}</p>
+        <form action="/logout" method="POST">
+            <button type="submit" class="btn">Logout</button>
+        </form>
+      </div>
+      <div id="form-status" class="form-status" hidden></div>
+
+      <h2>Links</h2>
+      {{if .Links}}
+      <table class="files-table account-table">
+        <thead>
+          <tr class="files-table-header"><th>Short link</th><th>Created</th><th>Expires</th><th></th><th></th></tr>
+        </thead>
+        <tbody>
+          {{range .Links}}
+          <tr>
+            <td><a href="/l/{{.Alias}}" class="file-link">{{.ShortURL}}</a></td>
+            <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
+            <td>{{if .Expired}}<span class="expired-badge">Expired</span>{{else}}{{.ExpiresAt.Format "Jan 2, 2006"}}{{end}}</td>
+            <td><a href="/l/{{.Alias}}/edit" class="btn">Edit</a></td>
+            <td><button type="button" class="btn account-delete-btn" data-id="{{.ID}}" data-alias="{{.Alias}}">Delete</button></td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      {{else}}
+      <p class="account-empty">No shortened links yet.</p>
+      {{end}}
+
+      <h2>Folders</h2>
+      {{if .Folders}}
+      <table class="files-table account-table">
+        <thead>
+          <tr class="files-table-header"><th>Short link</th><th>Created</th><th>Expires</th><th></th><th></th></tr>
+        </thead>
+        <tbody>
+          {{range .Folders}}
+          <tr>
+            <td><a href="/l/{{.Alias}}" class="file-link">{{.ShortURL}}</a></td>
+            <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
+            <td>{{if .Expired}}<span class="expired-badge">Expired</span>{{else}}{{.ExpiresAt.Format "Jan 2, 2006"}}{{end}}</td>
+            <td><a href="/l/{{.Alias}}/edit" class="btn">Edit</a></td>
+            <td><button type="button" class="btn account-delete-btn" data-id="{{.ID}}" data-alias="{{.Alias}}">Delete</button></td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      {{else}}
+      <p class="account-empty">No file folders yet.</p>
+      {{end}}
+
+      <h2>Danger Zone</h2>
+      <p class="account-empty">Permanently delete your account, all your shortened links, and all your uploaded files.</p>
+      <button type="button" id="delete-account-btn" class="btn">Delete Account</button>
+    </div>
+  </main>
+</div>
+{{template "footer" .}}
+<script src="/static/js/auth_account.js"></script>
+</body>
+</html>

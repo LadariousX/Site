@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"Blog/models"
+	"site/blog/models"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
@@ -30,6 +30,8 @@ type Frontmatter struct {
 	Excerpt string    `yaml:"excerpt"`
 	Cover   string    `yaml:"cover"` // filename from images/ directory
 	Repo    string    `yaml:"repo"`  // GitHub repo URL
+	Pinned  bool      `yaml:"pinned"`
+	Hidden  bool      `yaml:"hidden"`
 }
 
 // ParsePost reads a post directory and returns a Post model
@@ -90,7 +92,7 @@ func ParsePost(postDir string) (*models.Post, error) {
 				ext := strings.ToLower(filepath.Ext(entry.Name()))
 				// Support images and videos
 				if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" ||
-				   ext == ".mov" || ext == ".mp4" || ext == ".webm" {
+					ext == ".mov" || ext == ".mp4" || ext == ".webm" {
 					// Store relative path from posts/ root
 					relPath := filepath.Join(fm.Slug, "images", entry.Name())
 					imagePaths = append(imagePaths, relPath)
@@ -201,6 +203,8 @@ func ParsePost(postDir string) (*models.Post, error) {
 		CoverImage:  coverImage,
 		Files:       string(filesJSON),
 		RepoURL:     fm.Repo,
+		Pinned:      fm.Pinned,
+		Hidden:      fm.Hidden,
 	}
 
 	return post, nil
