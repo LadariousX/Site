@@ -43,6 +43,7 @@
 }
 
 input[type="url"],
+input[type="email"],
 input[type="text"],
 input[type="password"],
 input[type="number"],
@@ -59,6 +60,7 @@ select {
 }
 
 input[type="url"]:focus,
+input[type="email"]:focus,
 input[type="text"]:focus,
 input[type="password"]:focus,
 input[type="number"]:focus,

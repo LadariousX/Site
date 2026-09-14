@@ -4,6 +4,8 @@
 (function () {
   const PASSWORD_PLACEHOLDER = '••••••••';
   const EXP_UNITS = ['days', 'hr', 'min'];
+  // The site owner's account isn't held to the normal 90-day expiration cap.
+  const MAX_EXP = BOOT.isOwner ? 36500 : 90;
 
   const modeSwitch = document.getElementById('mode-switch');
   const modeButtons = document.querySelectorAll('.mode-btn');
@@ -39,6 +41,27 @@
 
   let stagedFiles = [];
   let widgetId = null;
+
+  // Uploads are queued rather than all fired at once — dragging in a big
+  // batch used to launch one concurrent request per file, piling them up
+  // against the server (and the per-account storage-limit check's row lock)
+  // until enough of them missed Cloudflare's edge timeout and came back as
+  // 524s.
+  const MAX_CONCURRENT_UPLOADS = 3;
+  let activeUploads = 0;
+  const uploadQueue = [];
+
+  function processUploadQueue() {
+    while (activeUploads < MAX_CONCURRENT_UPLOADS && uploadQueue.length > 0) {
+      const entry = uploadQueue.shift();
+      if (!stagedFiles.includes(entry)) continue; // removed before its turn came up
+      activeUploads++;
+      uploadEntry(entry).finally(() => {
+        activeUploads--;
+        processUploadQueue();
+      });
+    }
+  }
   let pendingRequest = null; // { url, payload, resolve, reject }
   let draftId = BOOT.editMode ? BOOT.linkId : null;
   let draftPromise = null;
@@ -54,18 +77,20 @@
     updateSubmitState();
   }
 
-  if (BOOT.editMode) {
-    modeSwitch.hidden = true;
-  } else {
-    modeSwitch.addEventListener('click', () => {
-      const next = currentMode === 'link' ? 'file' : 'link';
-      if (next === 'file' && !BOOT.signedIn) {
-        location.href = '/login?redirect=/link-manager';
-        return;
-      }
-      currentMode = next;
-      applyModeUI();
-    });
+  if (modeSwitch) {
+    if (BOOT.editMode) {
+      modeSwitch.hidden = true;
+    } else {
+      modeSwitch.addEventListener('click', () => {
+        const next = currentMode === 'link' ? 'file' : 'link';
+        if (next === 'file' && !BOOT.signedIn) {
+          location.href = '/login?redirect=/link-manager';
+          return;
+        }
+        currentMode = next;
+        applyModeUI();
+      });
+    }
   }
   applyModeUI();
 
@@ -109,12 +134,12 @@
 
   expValue.addEventListener('input', () => {
     const v = parseInt(expValue.value, 10);
-    if (!isNaN(v)) expValue.value = Math.min(90, Math.max(1, v));
+    if (!isNaN(v)) expValue.value = Math.min(MAX_EXP, Math.max(1, v));
   });
   document.querySelectorAll('.exp-step').forEach((btn) => {
     btn.addEventListener('click', () => {
       const v = (parseInt(expValue.value, 10) || 1) + (btn.dataset.dir === 'up' ? 1 : -1);
-      expValue.value = Math.min(90, Math.max(1, v));
+      expValue.value = Math.min(MAX_EXP, Math.max(1, v));
     });
   });
   expUnitToggle.addEventListener('click', () => {
@@ -132,8 +157,8 @@
 
   function readExpiration() {
     const value = parseInt(expValue.value, 10);
-    if (!value || value < 1 || value > 90) {
-      setFieldError(expirationError, 'Expiration must be between 1 and 90.');
+    if (!value || value < 1 || value > MAX_EXP) {
+      setFieldError(expirationError, 'Expiration must be between 1 and ' + MAX_EXP + '.');
       return null;
     }
     return { expirationValue: value, expirationUnit: expUnitToggle.dataset.unit };
@@ -258,7 +283,8 @@
     const newEntries = Array.from(fileList).map((file) => ({ file, progressEl: null }));
     stagedFiles.push(...newEntries);
     renderStagedFiles();
-    newEntries.forEach((entry) => uploadEntry(entry));
+    uploadQueue.push(...newEntries);
+    processUploadQueue();
   }
 
   function removeEntry(entry) {
@@ -480,7 +506,11 @@
           renderStagedFiles();
         } else {
           entry.failed = true;
-          entry.failureMessage = xhr.responseText && xhr.responseText.trim();
+          // A plain-text body is our own server's error message; anything
+          // that looks like a full HTML page is an intermediary (Cloudflare,
+          // nginx) error page, not something to show verbatim in the row.
+          const text = xhr.responseText && xhr.responseText.trim();
+          entry.failureMessage = text && !/^<(!doctype|html)/i.test(text) ? text : '';
         }
         resolve();
       };

@@ -24,7 +24,7 @@
       {{if .Links}}
       <table class="files-table account-table">
         <thead>
-          <tr class="files-table-header"><th>Short link</th><th>Created</th><th>Expires</th><th></th><th></th></tr>
+          <tr class="files-table-header"><th>Short link</th><th>Created</th><th>Expires</th><th></th><th></th><th></th></tr>
         </thead>
         <tbody>
           {{range .Links}}
@@ -32,6 +32,7 @@
             <td><a href="/l/{{.Alias}}" class="file-link">{{.ShortURL}}</a></td>
             <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
             <td>{{if .Expired}}<span class="expired-badge">Expired</span>{{else}}{{.ExpiresAt.Format "Jan 2, 2006"}}{{end}}</td>
+            <td><a href="/link-manager/summary?alias={{.Alias}}" class="btn">View Summary</a></td>
             <td><a href="/l/{{.Alias}}/edit" class="btn">Edit</a></td>
             <td><button type="button" class="btn account-delete-btn" data-id="{{.ID}}" data-alias="{{.Alias}}">Delete</button></td>
           </tr>
@@ -46,7 +47,7 @@
       {{if .Folders}}
       <table class="files-table account-table">
         <thead>
-          <tr class="files-table-header"><th>Short link</th><th>Created</th><th>Expires</th><th></th><th></th></tr>
+          <tr class="files-table-header"><th>Short link</th><th>Created</th><th>Expires</th><th></th><th></th><th></th></tr>
         </thead>
         <tbody>
           {{range .Folders}}
@@ -54,6 +55,7 @@
             <td><a href="/l/{{.Alias}}" class="file-link">{{.ShortURL}}</a></td>
             <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
             <td>{{if .Expired}}<span class="expired-badge">Expired</span>{{else}}{{.ExpiresAt.Format "Jan 2, 2006"}}{{end}}</td>
+            <td><a href="/link-manager/summary?alias={{.Alias}}" class="btn">View Summary</a></td>
             <td><a href="/l/{{.Alias}}/edit" class="btn">Edit</a></td>
             <td><button type="button" class="btn account-delete-btn" data-id="{{.ID}}" data-alias="{{.Alias}}">Delete</button></td>
           </tr>

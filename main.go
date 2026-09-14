@@ -116,7 +116,8 @@ func main() {
 	mux.HandleFunc("POST /api/link-manager/links", linkManager.LinkManagerCreateHandler)
 	mux.HandleFunc("POST /api/link-manager/links/draft", linkManager.LinkManagerDraftHandler)
 	mux.HandleFunc("PATCH /api/link-manager/links/{id}", linkManager.LinkManagerUpdateHandler)
-	mux.HandleFunc("POST /api/link-manager/links/{id}/files", linkManager.LinkManagerUploadHandler)
+	// File uploads paused — see TODO.md ("due to network limitations").
+	// mux.HandleFunc("POST /api/link-manager/links/{id}/files", linkManager.LinkManagerUploadHandler)
 	mux.HandleFunc("DELETE /api/link-manager/links/{id}/files/{filename}", linkManager.LinkManagerDeleteFileHandler)
 	mux.HandleFunc("GET /l/{alias}", linkManager.LinkAccessHandler)
 	mux.HandleFunc("POST /l/{alias}", linkManager.LinkUnlockHandler)

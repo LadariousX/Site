@@ -13,12 +13,10 @@ go.work
 *.db-shm
 *.db-wal
 
-blog/data/*
 blog/posts/*
 /db/
 **/raw/*
 
-/deploy/etc
 
 # macOS
 .DS_Store

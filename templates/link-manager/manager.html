@@ -12,10 +12,12 @@
     <div class="container">
       <div class="lm-header">
         <h1>{{if .EditMode}}Edit Link{{else}}Link Manager{{end}}</h1>
+        <!-- File uploads paused (see TODO.md) — URL/File mode switch disabled.
         <div class="mode-switch" id="mode-switch">
           <button type="button" class="mode-btn active" data-mode="link">URL</button>
           <button type="button" class="mode-btn" data-mode="file">File</button>
         </div>
+        -->
       </div>
       <p>{{if .EditMode}}Update this link's destination, alias, expiration, or password.{{else}}Shorten a URL, or share files, behind an expiring, optionally password-protected link.{{end}}</p>
 
@@ -63,7 +65,7 @@
           <div class="field-group expiration-row">
             <label for="exp-value">Expires in</label>
             <div class="expiration-inputs">
-              <input type="number" id="exp-value" value="7" min="1" max="90" />
+              <input type="number" id="exp-value" value="7" min="1" max="{{if .IsOwner}}36500{{else}}90{{end}}" />
               <div class="exp-steppers">
                 <button type="button" class="exp-step" data-dir="up" aria-label="Increase">
                   <span class="exp-step-icon"></span>
@@ -110,6 +112,7 @@
   window.BOOT = {
     editMode: {{.EditMode}},
     signedIn: {{.SignedIn}},
+    isOwner: {{.IsOwner}},
     linkId: {{.LinkID}},
     alias: {{.Alias}},
     type: {{.Type}},

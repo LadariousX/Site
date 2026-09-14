@@ -42,6 +42,9 @@ const (
 	defaultUserStorageBytes = 1 * 1024 * 1024 * 1024   // 1 GiB
 	ownerStorageBytes       = 100 * 1024 * 1024 * 1024 // 100 GiB
 	ownerEmail              = "laydenlblackwell@gmail.com"
+
+	defaultMaxExpirationDays = 90
+	ownerMaxExpirationDays   = 36500 // ~100 years — effectively never expires
 )
 
 // storageLimitBytes returns the total file-link storage a user is allowed.
@@ -52,6 +55,15 @@ func storageLimitBytes(user authmodels.User) int64 {
 	return defaultUserStorageBytes
 }
 
+// maxExpirationDays returns the largest expiration a user may set. The site
+// owner isn't held to the normal cap.
+func maxExpirationDays(user *authmodels.User) int {
+	if user != nil && user.Email == ownerEmail {
+		return ownerMaxExpirationDays
+	}
+	return defaultMaxExpirationDays
+}
+
 func formatGB(bytes int64) string {
 	return fmt.Sprintf("%d GB", bytes/(1024*1024*1024))
 }
@@ -60,6 +72,7 @@ type linkManagerPageData struct {
 	TurnstileSiteKey string
 	EditMode         bool
 	SignedIn         bool
+	IsOwner          bool
 	LinkID           uint
 	Alias            string
 	Type             string
@@ -109,9 +122,11 @@ func (h *Handlers) renderLinkManager(w http.ResponseWriter, data linkManagerPage
 }
 
 func (h *Handlers) LinkManagerHandler(w http.ResponseWriter, r *http.Request) {
+	user := authhandlers.CurrentUser(h.DB, r)
 	h.renderLinkManager(w, linkManagerPageData{
 		TurnstileSiteKey: os.Getenv("TurnstileSiteKey"),
-		SignedIn:         authhandlers.CurrentUser(h.DB, r) != nil,
+		SignedIn:         user != nil,
+		IsOwner:          user != nil && user.Email == ownerEmail,
 		FilesJSON:        template.JS("[]"),
 	})
 }
@@ -193,9 +208,9 @@ func normalizeDestination(dest string) string {
 	return "https://" + trimmed
 }
 
-func expirationDuration(value int, unit string) (time.Duration, error) {
-	if value <= 0 || value > 90 {
-		return 0, fmt.Errorf("expiration value must be between 1 and 90")
+func expirationDuration(value int, unit string, maxDays int) (time.Duration, error) {
+	if value <= 0 || value > maxDays {
+		return 0, fmt.Errorf("expiration value must be between 1 and %d", maxDays)
 	}
 	switch unit {
 	case "min":
@@ -311,7 +326,9 @@ func (h *Handlers) LinkManagerCreateHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	duration, err := expirationDuration(req.ExpirationValue, req.ExpirationUnit)
+	user := authhandlers.CurrentUser(h.DB, r)
+
+	duration, err := expirationDuration(req.ExpirationValue, req.ExpirationUnit, maxExpirationDays(user))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -332,8 +349,6 @@ func (h *Handlers) LinkManagerCreateHandler(w http.ResponseWriter, r *http.Reque
 		}
 		passwordHash = string(hash)
 	}
-
-	user := authhandlers.CurrentUser(h.DB, r)
 
 	alias := strings.TrimSpace(req.Alias)
 	userSuppliedAlias := alias != ""
@@ -914,6 +929,7 @@ func (h *Handlers) LinkEditPageHandler(w http.ResponseWriter, r *http.Request) {
 		TurnstileSiteKey: os.Getenv("TurnstileSiteKey"),
 		EditMode:         true,
 		SignedIn:         true,
+		IsOwner:          user.Email == ownerEmail,
 		LinkID:           link.ID,
 		Alias:            alias,
 		Type:             link.Type,
@@ -983,7 +999,7 @@ func (h *Handlers) LinkManagerUpdateHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	if req.ResetExpiration {
-		duration, err := expirationDuration(req.ExpirationValue, req.ExpirationUnit)
+		duration, err := expirationDuration(req.ExpirationValue, req.ExpirationUnit, maxExpirationDays(user))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

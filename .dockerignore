@@ -2,7 +2,7 @@
 blog/posts
 blog/data
 **/raw/
-databases/link-manager-filedata/data
+db/
 
 .git
 .idea
