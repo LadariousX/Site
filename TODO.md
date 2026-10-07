@@ -5,7 +5,7 @@ do it... free... on its domain... (Y'all don't worry about this it's a different
 
 ## bugs / warnings
 - if files are not updating on the site, its Cloudflare cache, clear in overview.
-- due to network limitations, file storage in link-manager has been postponed
+- due to network limitations, file storage in link-manager has been postponedw
 
 ## general
 - sign in code still using "onbording" email

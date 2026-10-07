@@ -141,7 +141,7 @@
 
   async function submitForm(url, email, token) {
     try {
-      const res = await fetch('/tools/api/survey-bot', {
+      const res = await fetch('/api/survey-bot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, email, turnstileToken: token }),
