@@ -18,8 +18,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server .
 FROM alpine:3.20
 
 # certs in case any subproject makes outbound HTTPS calls (Turnstile, Resend),
-# tzdata since blog posts have dates
-RUN apk add --no-cache ca-certificates tzdata
+# tzdata since blog posts have dates, chromium for /e/tamucc-lib-hours, which
+# scrapes the library page with headless Chrome (chromedp)
+RUN apk add --no-cache ca-certificates tzdata chromium
 
 WORKDIR /app
 

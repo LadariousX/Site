@@ -15,6 +15,7 @@ import (
 	blogdb "site/blog/db"
 	bloghandlers "site/blog/handlers"
 	"site/blog/parser"
+	endpointhandlers "site/endpoints/handlers"
 	linkmanagerhandlers "site/link-manager/handlers"
 	"site/link-manager/linkmanager"
 	surveybothandlers "site/survey-bot/handlers"
@@ -79,10 +80,12 @@ func main() {
 	appTmpl = template.Must(appTmpl.ParseGlob("templates/auth/*.html"))
 	appTmpl = template.Must(appTmpl.ParseGlob("templates/link-manager/*.html"))
 	appTmpl = template.Must(appTmpl.ParseGlob("templates/survey-bot/*.html"))
+	appTmpl = template.Must(appTmpl.ParseGlob("templates/endpoints/*.html"))
 
 	auth := &authhandlers.Handlers{DB: appDatabase, Templates: appTmpl}
 	linkManager := &linkmanagerhandlers.Handlers{DB: appDatabase, Templates: appTmpl}
 	surveyBot := &surveybothandlers.Handlers{Templates: appTmpl}
+	endpoints := &endpointhandlers.Handlers{Templates: appTmpl}
 
 	// --- Routes ---
 	mux := http.NewServeMux()
@@ -128,6 +131,10 @@ func main() {
 	// Survey bot
 	mux.HandleFunc("GET /survey-bot", surveyBot.SurveyBotHandler)
 	mux.HandleFunc("POST /api/survey-bot", surveyBot.SurveyBotAPIHandler)
+
+	// Endpoints
+	mux.HandleFunc("GET /endpoints", endpoints.EndpointsPageHandler)
+	mux.HandleFunc("GET /e/tamucc-lib-hours", endpoints.TamuccLibHoursHandler)
 
 	log.Printf("Server listening on %s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
