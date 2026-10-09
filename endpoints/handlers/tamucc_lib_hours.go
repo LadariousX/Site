@@ -1,20 +1,18 @@
 package handlers
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/chromedp/chromedp"
 )
 
-const (
-	tamuccLibURL           = "https://www.tamucc.edu/library/"
-	tamuccLibHoursSelector = `//*[@id="todays-hours-hours"]` // X-path selector for hours string
-)
+// The library homepage (tamucc.edu/library) fills #todays-hours-hours from
+// this LibCal feed using locations[0].rendered, so we read it directly
+// instead of scraping the page with a headless browser.
+const tamuccLibHoursURL = "https://api3.libcal.com/api_hours_today.php?iid=4097&lid=0&format=json&systemTime=0"
 
 type tamuccLibHoursResponse struct {
 	Raw    string `json:"raw"`
@@ -24,56 +22,51 @@ type tamuccLibHoursResponse struct {
 	Speech string `json:"speech"`
 }
 
+type libCalHours struct {
+	Locations []struct {
+		Times struct {
+			Status string `json:"status"`
+			Hours  []struct {
+				From string `json:"from"`
+				To   string `json:"to"`
+			} `json:"hours"`
+		} `json:"times"`
+		Rendered string `json:"rendered"`
+	} `json:"locations"`
+}
+
+var libCalClient = &http.Client{Timeout: 10 * time.Second}
+
 func (h *Handlers) TamuccLibHoursHandler(w http.ResponseWriter, r *http.Request) {
-	raw, err := scrapeTamuccLibHours(r.Context())
+	resp, err := libCalClient.Get(tamuccLibHoursURL)
 	if err != nil {
-		log.Printf("tamucc-lib-hours scrape error: %v", err)
+		log.Printf("tamucc-lib-hours fetch error: %v", err)
+		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "failed to get library hours"})
+		return
+	}
+	defer resp.Body.Close()
+
+	var data libCalHours
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil || len(data.Locations) == 0 {
+		log.Printf("tamucc-lib-hours decode error: %v", err)
 		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "failed to get library hours"})
 		return
 	}
 
-	out := tamuccLibHoursResponse{Raw: raw, Status: "open"}
-	if open, close, ok := strings.Cut(raw, " - "); ok {
-		out.Open = strings.TrimSpace(open)
-		out.Close = strings.TrimSpace(close)
-		out.Speech = fmt.Sprintf("The library is open today from %s to %s.", out.Open, out.Close)
-	} else if strings.Contains(strings.ToLower(raw), "closed") {
+	loc := data.Locations[0]
+	out := tamuccLibHoursResponse{Raw: strings.ToUpper(loc.Rendered), Status: "open"}
+	switch {
+	case loc.Times.Status == "closed":
 		out.Status = "closed"
 		out.Speech = "The library is closed today."
-	} else {
+	case len(loc.Times.Hours) > 0:
+		out.Open = strings.ToUpper(loc.Times.Hours[0].From)
+		out.Close = strings.ToUpper(loc.Times.Hours[len(loc.Times.Hours)-1].To)
+		out.Speech = fmt.Sprintf("The library is open today from %s to %s.", out.Open, out.Close)
+	default:
 		// e.g. "24 Hours"
-		out.Speech = fmt.Sprintf("The library's hours today are: %s.", raw)
+		out.Speech = fmt.Sprintf("The library's hours today are: %s.", out.Raw)
 	}
 
 	writeJSON(w, http.StatusOK, out)
-}
-
-// scrapeTamuccLibHours loads the library homepage in headless Chrome and reads
-// today's hours once the page's script has filled them in.
-func scrapeTamuccLibHours(ctx context.Context) (string, error) {
-	// The timeout covers the whole browser, which only lives for this request.
-	ctx, timeoutCancel := context.WithTimeout(ctx, time.Minute)
-	defer timeoutCancel()
-
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.NoSandbox, // needed when running as root in the container
-		chromedp.DisableGPU,
-	)
-	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
-	defer allocCancel()
-	ctx, cancel := chromedp.NewContext(allocCtx)
-	defer cancel()
-
-	err := chromedp.Do(ctx,
-		chromedp.Navigate(tamuccLibURL),
-		chromedp.WaitReady(tamuccLibHoursSelector),
-	)
-	if err != nil {
-		return "", err
-	}
-	libHours, err := chromedp.Run(ctx, chromedp.Text(tamuccLibHoursSelector))
-	if err != nil {
-		return "", err
-	}
-	return strings.ToUpper(strings.TrimSpace(libHours)), nil
 }
