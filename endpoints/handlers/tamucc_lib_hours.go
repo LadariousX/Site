@@ -54,18 +54,21 @@ func (h *Handlers) TamuccLibHoursHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	loc := data.Locations[0]
-	out := tamuccLibHoursResponse{Raw: strings.ToUpper(loc.Rendered), Status: "open"}
+	out := tamuccLibHoursResponse{Raw: strings.ToUpper(loc.Rendered)}
+	hours := loc.Times.Hours
 	switch {
 	case loc.Times.Status == "closed":
 		out.Status = "closed"
 		out.Speech = "The library is closed today."
-	case len(loc.Times.Hours) > 0:
-		out.Open = strings.ToUpper(loc.Times.Hours[0].From)
-		out.Close = strings.ToUpper(loc.Times.Hours[len(loc.Times.Hours)-1].To)
+	case loc.Times.Status == "open" && len(hours) > 0 && hours[0].From != "" && hours[len(hours)-1].To != "":
+		out.Status = "open"
+		out.Open = strings.ToUpper(hours[0].From)
+		out.Close = strings.ToUpper(hours[len(hours)-1].To)
 		out.Speech = fmt.Sprintf("The library is open today from %s to %s.", out.Open, out.Close)
 	default:
-		// e.g. "24 Hours"
-		out.Speech = fmt.Sprintf("The library's hours today are: %s.", out.Raw)
+		// Not in the expected format (e.g. "24 Hours", "text", "not-set"): leave
+		// status/open/close blank and speak the feed's string as-is.
+		out.Speech = loc.Rendered
 	}
 
 	writeJSON(w, http.StatusOK, out)

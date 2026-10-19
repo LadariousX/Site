@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "head" .}}
+  <title>PDF Splitter</title>
+  <link rel="stylesheet" href="/static/css/pdf-splitter_pdf-splitter.css" />
+</head>
+<body class="pdf-splitter">
+{{template "header" .}}
+
+<div class="ps-toolbar">
+  <div class="ps-group">
+    <label class="btn">Open PDF<input id="fileInput" type="file" accept="application/pdf" multiple hidden></label>
+    <span id="status" class="ps-status">Drop one or more PDFs anywhere</span>
+  </div>
+  <div class="ps-group">
+    <label class="ps-opt" title="White border around each page's content">
+      <input type="checkbox" id="marginOn" checked> Margin
+      <input type="number" id="marginIn" value="0.5" min="0" max="3" step="0.125"> in
+    </label>
+    <label class="ps-opt" title="Use the smallest page scale for every page so text size is consistent">
+      <input type="checkbox" id="uniform"> Same scale
+    </label>
+    <label class="ps-opt" title="Push each clipping against the left margin (or page edge) instead of centering it">
+      <input type="checkbox" id="alignLeft" checked> Align left
+    </label>
+    <button class="btn" id="clearBtn" disabled>Clear breaks</button>
+    <span id="pageCount" class="ps-status">0 pages</span>
+    <button class="btn ps-download" id="downloadBtn" disabled>Download PDF</button>
+  </div>
+</div>
+
+<main class="ps-main">
+  <section class="ps-pane">
+    <div class="ps-scroll" id="editorScroll">
+      <div id="editorDoc" hidden><div class="ghost" id="ghost"></div></div>
+      <div class="ps-empty" id="editorEmpty">
+        <div>
+          <h2>Drop a PDF here</h2>
+          <p>Click the page to add a break, drag a break to move it, × to remove it, and Ctrl/⌘+Z to undo.
+             Uncheck a page's box in the left gutter to leave it out. Each page is cropped to its content
+             and fit onto US Letter. Everything runs in your browser; nothing is uploaded.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="ps-pane">
+    <div class="ps-scroll" id="previewScroll">
+      <div id="preview"></div>
+    </div>
+  </section>
+</main>
+<div id="drop">Drop PDF to open</div>
+
+{{template "footer" .}}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="/static/js/pdf-splitter_pdf-splitter.js"></script>
+</body>
+</html>

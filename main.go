@@ -11,6 +11,7 @@ import (
 
 	"site/database"
 
+	pdfsplitterhandlers "site/PDF-splitter/handlers"
 	authhandlers "site/auth/handlers"
 	blogdb "site/blog/db"
 	bloghandlers "site/blog/handlers"
@@ -81,11 +82,13 @@ func main() {
 	appTmpl = template.Must(appTmpl.ParseGlob("templates/link-manager/*.html"))
 	appTmpl = template.Must(appTmpl.ParseGlob("templates/survey-bot/*.html"))
 	appTmpl = template.Must(appTmpl.ParseGlob("templates/endpoints/*.html"))
+	appTmpl = template.Must(appTmpl.ParseGlob("templates/pdf-splitter/*.html"))
 
 	auth := &authhandlers.Handlers{DB: appDatabase, Templates: appTmpl}
 	linkManager := &linkmanagerhandlers.Handlers{DB: appDatabase, Templates: appTmpl}
 	surveyBot := &surveybothandlers.Handlers{Templates: appTmpl}
 	endpoints := &endpointhandlers.Handlers{Templates: appTmpl}
+	pdfSplitter := &pdfsplitterhandlers.Handlers{Templates: appTmpl}
 
 	// --- Routes ---
 	mux := http.NewServeMux()
@@ -135,6 +138,9 @@ func main() {
 	// Endpoints
 	mux.HandleFunc("GET /endpoints", endpoints.EndpointsPageHandler)
 	mux.HandleFunc("GET /e/tamucc-lib-hours", endpoints.TamuccLibHoursHandler)
+
+	// PDF splitter (runs client-side; server only renders the page)
+	mux.HandleFunc("GET /pdf-splitter", pdfSplitter.PDFSplitterHandler)
 
 	log.Printf("Server listening on %s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
