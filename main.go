@@ -101,6 +101,7 @@ func main() {
 	// Blog
 	mux.HandleFunc("GET /{$}", blog.IndexHandler)
 	mux.HandleFunc("GET /about", blog.AboutHandler)
+	mux.HandleFunc("POST /api/contact", blog.ContactHandler)
 	mux.HandleFunc("GET /dir", blog.DirHandler)
 	mux.HandleFunc("GET /posts/{slug}", blog.PostHandler)
 	mux.HandleFunc("GET /posts/{slug}/gallery", blog.GalleryHandler)

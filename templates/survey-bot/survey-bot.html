@@ -29,8 +29,9 @@
         </div>
 
         <div id="qr-area" class="qr-area" hidden>
-          <div id="qr-reader"></div>
+          <video id="qr-video" playsinline muted></video>
           <div class="qr-stop-row">
+            <button type="button" id="torch-btn" class="btn" hidden>Flashlight</button>
             <button type="button" id="stop-scan-btn" class="btn">Cancel</button>
           </div>
         </div>
@@ -54,19 +55,24 @@
 </div>
 {{template "footer" .}}
 
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstile&render=explicit" defer></script>
 <script>
   const urlInput = document.getElementById('url-input');
   const scanBtn = document.getElementById('scan-btn');
   const stopScanBtn = document.getElementById('stop-scan-btn');
   const qrArea = document.getElementById('qr-area');
+  const qrVideo = document.getElementById('qr-video');
+  const torchBtn = document.getElementById('torch-btn');
   const submitBtn = document.getElementById('submit-btn');
   const statusEl = document.getElementById('form-status');
   const codeDisplay = document.getElementById('code-display');
   const codeValue = document.getElementById('code-value');
 
-  let scanner = null;
+  let stream = null;
+  let scanning = false;
+  let scanSession = 0;
+  let torchOn = false;
+  let detectorPromise = null;
   let widgetId = null;
   let pendingFormData = null;
 
@@ -90,34 +96,110 @@
     });
   }
 
-  scanBtn.addEventListener('click', () => {
+  // Prefer the browser's native detector (Chrome/Android, macOS); otherwise fall
+  // back to the ZXing C++ WASM build, which also covers iOS Safari and Firefox.
+  function getDetector() {
+    if (!detectorPromise) {
+      detectorPromise = (async () => {
+        if ('BarcodeDetector' in window) {
+          try {
+            const formats = await window.BarcodeDetector.getSupportedFormats();
+            if (formats.includes('qr_code')) return new window.BarcodeDetector({ formats: ['qr_code'] });
+          } catch {}
+        }
+        const { BarcodeDetector } = await import('https://cdn.jsdelivr.net/npm/barcode-detector@3.2.2/ponyfill/+esm');
+        return new BarcodeDetector({ formats: ['qr_code'] });
+      })();
+      detectorPromise.catch(() => { detectorPromise = null; });
+    }
+    return detectorPromise;
+  }
+
+  scanBtn.addEventListener('click', async () => {
     qrArea.hidden = false;
     scanBtn.disabled = true;
+    scanning = true;
+    const session = ++scanSession;
+    const active = () => scanning && session === scanSession;
 
-    scanner = new Html5Qrcode('qr-reader');
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      (decodedText) => {
-        urlInput.value = decodedText;
-        stopScanner();
-      },
-      () => {}
-    ).catch(() => {
+    const detectorReady = getDetector();
+
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+      });
+      if (!active()) {
+        s.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      stream = s;
+    } catch {
       showStatus('Camera access denied or unavailable.', 'error');
       stopScanner();
-    });
+      return;
+    }
+
+    const track = stream.getVideoTracks()[0];
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    if (caps.focusMode && caps.focusMode.includes('continuous')) {
+      track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+    }
+    torchBtn.hidden = !caps.torch;
+
+    qrVideo.srcObject = stream;
+    try {
+      await qrVideo.play();
+    } catch {}
+
+    let detector;
+    try {
+      detector = await detectorReady;
+    } catch {
+      if (!active()) return;
+      showStatus('Could not load the QR decoder. Please paste the URL instead.', 'error');
+      stopScanner();
+      return;
+    }
+
+    // Decode the full frame as fast as the detector allows, paced by animation frames.
+    while (active()) {
+      if (qrVideo.readyState >= 2) {
+        try {
+          const codes = await detector.detect(qrVideo);
+          if (active() && codes.length) {
+            urlInput.value = codes[0].rawValue;
+            stopScanner();
+            return;
+          }
+        } catch {}
+      }
+      await new Promise(requestAnimationFrame);
+    }
+  });
+
+  torchBtn.addEventListener('click', () => {
+    if (!stream) return;
+    torchOn = !torchOn;
+    stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: torchOn }] }).catch(() => {});
   });
 
   stopScanBtn.addEventListener('click', stopScanner);
 
   function stopScanner() {
-    if (scanner) {
-      scanner.stop().catch(() => {}).finally(() => {
-        scanner.clear();
-        scanner = null;
-      });
+    scanning = false;
+    scanSession++;
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      stream = null;
     }
+    qrVideo.srcObject = null;
+    torchOn = false;
+    torchBtn.hidden = true;
     qrArea.hidden = true;
     scanBtn.disabled = false;
   }

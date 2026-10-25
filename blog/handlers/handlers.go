@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"time"
 
@@ -169,7 +170,11 @@ func (h *Handlers) PostHandler(w http.ResponseWriter, r *http.Request) {
 
 // AboutHandler serves the about page
 func (h *Handlers) AboutHandler(w http.ResponseWriter, r *http.Request) {
-	if err := h.Templates.ExecuteTemplate(w, "about.html", nil); err != nil {
+	data := map[string]interface{}{
+		"TurnstileSiteKey": os.Getenv("TurnstileSiteKey"),
+	}
+
+	if err := h.Templates.ExecuteTemplate(w, "about.html", data); err != nil {
 		log.Printf("Error rendering about: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}

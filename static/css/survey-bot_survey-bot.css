@@ -47,18 +47,19 @@ input[type="email"]:focus {
   background: var(--bg-raised);
 }
 
-#qr-reader {
+#qr-video {
+  display: block;
   width: 100%;
-}
-
-#qr-reader video {
-  border-radius: 0;
+  max-height: 60vh;
+  object-fit: cover;
+  background: #000;
 }
 
 .qr-stop-row {
   padding: 0.5rem;
   display: flex;
   justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .form-status {

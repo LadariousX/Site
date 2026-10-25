@@ -11,3 +11,4 @@ do it... free... on its domain... (Y'all don't worry about this it's a different
 - sign in code still using "onbording" email
 - wait for file uploads to finish before allow user to continue
 - stop text wrapping in file edit page. autofit file sizes, hide overflow of name
+- give survey bot a container for processing QR's locally or find a better JavaScript QR reader
