@@ -134,7 +134,7 @@ func main() {
 
 	// Survey bot
 	mux.HandleFunc("GET /survey-bot", surveyBot.SurveyBotHandler)
-	mux.HandleFunc("POST /api/survey-bot", surveyBot.SurveyBotAPIHandler)
+	mux.HandleFunc("GET /ws/survey-bot", surveyBot.SurveyBotSocketHandler)
 
 	// Endpoints
 	mux.HandleFunc("GET /endpoints", endpoints.EndpointsPageHandler)

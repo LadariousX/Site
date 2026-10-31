@@ -217,38 +217,66 @@
 
     pendingFormData = { url, email };
     submitBtn.disabled = true;
-    showStatus('Message sent, a response may take up to 2 minutes', 'pending');
+    codeDisplay.hidden = true;
+    showStatus('Running security check...', 'pending');
     turnstile.execute(widgetId);
   });
 
-  async function submitForm(url, email, token) {
-    try {
-      const res = await fetch('/api/survey-bot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, email, turnstileToken: token }),
-      });
+  // Opens a websocket so the bot's progress shows up live. The server sends {type, message, code}:
+  // "status" while working, then one final "done", "expired" or "error" before closing.
+  function submitForm(url, email, token) {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(proto + '//' + location.host + '/ws/survey-bot');
+    let finished = false;
 
-      if (res.ok) {
-        const data = await res.json();
-        showStatus(data.message || 'Submitted successfully!', 'success');
-        if (data.code) {
-          codeValue.textContent = data.code;
-          codeDisplay.hidden = false;
-        }
-        document.getElementById('survey-form').reset();
-      } else {
-        const text = await res.text();
-        const prefix = res.status === 500 ? 'Internal server error: ' : 'Error: ';
-        showStatus(prefix + (text || res.statusText), 'error');
-        codeDisplay.hidden = true;
-      }
-    } catch (err) {
-      showStatus('Network error: ' + err.message, 'error');
-    } finally {
+    function finish() {
+      finished = true;
       submitBtn.disabled = false;
       if (widgetId !== null) turnstile.reset(widgetId);
     }
+
+    showStatus('Connecting...', 'pending');
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({ url, email, turnstileToken: token }));
+    });
+
+    ws.addEventListener('message', (event) => {
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      switch (data.type) {
+        case 'status':
+          showStatus(data.message, 'pending');
+          break;
+        case 'done':
+          showStatus(data.message || 'Submitted successfully!', 'success');
+          if (data.code) {
+            codeValue.textContent = data.code;
+            codeDisplay.hidden = false;
+          }
+          document.getElementById('survey-form').reset();
+          finish();
+          break;
+        case 'expired':
+          showStatus(data.message || 'This survey has expired.', 'warning');
+          urlInput.value = '';
+          finish();
+          break;
+        default:
+          showStatus('Error: ' + (data.message || 'unknown error'), 'error');
+          finish();
+      }
+    });
+
+    ws.addEventListener('close', () => {
+      if (!finished) {
+        showStatus('Connection lost before the survey finished. Please try again.', 'error');
+        finish();
+      }
+    });
   }
 
   function showStatus(msg, type) {

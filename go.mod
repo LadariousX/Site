@@ -3,6 +3,7 @@ module site
 go 1.26.2
 
 require (
+	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/resend/resend-go/v4 v4.3.0

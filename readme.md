@@ -15,6 +15,7 @@ inside the deployment dir there is a docker-compose which brings up the whole si
 ## Recent versions
 **v1:** latest major update where a single go app hosts the blog and various tools.
 **v1.01:** added feedback area to `/about`, gave survey bot a new qr reader, and Blog case mismatch bug fix.
+**v1.02:** survey bot talks over a websocket for live status updates and skips expired surveys.
 
 ### Environment files
 Two `.env` files, neither committed (see `.gitignore`), need to exist before the site runs:
