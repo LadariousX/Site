@@ -5,7 +5,8 @@
   const PASSWORD_PLACEHOLDER = '••••••••';
   const EXP_UNITS = ['days', 'hr', 'min'];
   // The site owner's account isn't held to the normal 90-day expiration cap.
-  const MAX_EXP = BOOT.isOwner ? 36500 : 90;
+  const MAX_EXP_DAYS = BOOT.isOwner ? 36500 : 90;
+  const UNITS_PER_DAY = { days: 1, hr: 24, min: 1440 };
 
   const modeSwitch = document.getElementById('mode-switch');
   const modeButtons = document.querySelectorAll('.mode-btn');
@@ -27,6 +28,7 @@
   const stagedFilesBody = document.getElementById('staged-files');
   const resetExpRow = document.getElementById('reset-exp-row');
   const resetExpCheckbox = document.getElementById('reset-exp-checkbox');
+  const neverExpireCheckbox = document.getElementById('never-expire-checkbox'); // owner only
   const expValue = document.getElementById('exp-value');
   const expUnitToggle = document.getElementById('exp-unit-toggle');
   const unitLabel = expUnitToggle.querySelector('.unit-label');
@@ -119,14 +121,33 @@
 
   // ---- expiration control ----
 
-  function setExpirationLocked(locked) {
+  function neverExpireSelected() {
+    return !!neverExpireCheckbox && neverExpireCheckbox.checked;
+  }
+
+  // In edit mode nothing about the expiration can change until "reset" is
+  // ticked; "never expire" makes the value and unit irrelevant.
+  function refreshExpirationLock() {
+    const resetLocked = BOOT.editMode && !resetExpCheckbox.checked;
+    if (neverExpireCheckbox) neverExpireCheckbox.disabled = resetLocked;
+
+    const locked = resetLocked || neverExpireSelected();
     expValue.disabled = locked;
     document.querySelectorAll('.exp-step').forEach((b) => { b.disabled = locked; });
     expUnitToggle.disabled = locked;
   }
 
+  function maxExpForCurrentUnit() {
+    return MAX_EXP_DAYS * UNITS_PER_DAY[expUnitToggle.dataset.unit];
+  }
+
+  function clampExp(value) {
+    return Math.min(maxExpForCurrentUnit(), Math.max(1, value));
+  }
+
   function setUnit(unit) {
     expUnitToggle.dataset.unit = unit;
+    expValue.max = maxExpForCurrentUnit();
     unitLabel.textContent = unit;
     unitDots.forEach((d) => d.classList.toggle('active', d.dataset.unit === unit));
   }
@@ -134,17 +155,20 @@
 
   expValue.addEventListener('input', () => {
     const v = parseInt(expValue.value, 10);
-    if (!isNaN(v)) expValue.value = Math.min(MAX_EXP, Math.max(1, v));
+    if (!isNaN(v)) expValue.value = clampExp(v);
   });
   document.querySelectorAll('.exp-step').forEach((btn) => {
     btn.addEventListener('click', () => {
       const v = (parseInt(expValue.value, 10) || 1) + (btn.dataset.dir === 'up' ? 1 : -1);
-      expValue.value = Math.min(MAX_EXP, Math.max(1, v));
+      expValue.value = clampExp(v);
     });
   });
   expUnitToggle.addEventListener('click', () => {
     setUnit(EXP_UNITS[(EXP_UNITS.indexOf(expUnitToggle.dataset.unit) + 1) % EXP_UNITS.length]);
+    const v = parseInt(expValue.value, 10);
+    if (!isNaN(v)) expValue.value = clampExp(v);
   });
+  if (neverExpireCheckbox) neverExpireCheckbox.addEventListener('change', refreshExpirationLock);
   retentionLink.addEventListener('click', () => {
     retentionPolicyText.hidden = !retentionPolicyText.hidden;
   });
@@ -156,12 +180,17 @@
   }
 
   function readExpiration() {
+    if (neverExpireSelected()) {
+      return { expirationValue: 0, expirationUnit: 'days', neverExpire: true };
+    }
+
     const value = parseInt(expValue.value, 10);
-    if (!value || value < 1 || value > MAX_EXP) {
-      setFieldError(expirationError, 'Expiration must be between 1 and ' + MAX_EXP + '.');
+    const max = maxExpForCurrentUnit();
+    if (!value || value < 1 || value > max) {
+      setFieldError(expirationError, 'Expiration must be between 1 and ' + max + ' ' + expUnitToggle.dataset.unit + ' (max ' + MAX_EXP_DAYS + ' days).');
       return null;
     }
-    return { expirationValue: value, expirationUnit: expUnitToggle.dataset.unit };
+    return { expirationValue: value, expirationUnit: expUnitToggle.dataset.unit, neverExpire: false };
   }
 
   // ---- edit-mode bootstrap ----
@@ -176,7 +205,7 @@
     const rounded = roundToLargestUnit(remainingSeconds);
     expValue.value = rounded.value;
     setUnit(rounded.unit);
-    setExpirationLocked(true);
+    refreshExpirationLock();
 
     if (BOOT.hasPassword) passwordInput.value = PASSWORD_PLACEHOLDER;
 
@@ -190,9 +219,7 @@
     }
   }
 
-  resetExpCheckbox.addEventListener('change', () => {
-    setExpirationLocked(!resetExpCheckbox.checked);
-  });
+  resetExpCheckbox.addEventListener('change', refreshExpirationLock);
 
   // ---- staged files table ----
 
@@ -553,7 +580,7 @@
       return null;
     }
 
-    return { expirationValue: exp.expirationValue, expirationUnit: exp.expirationUnit, password };
+    return { expirationValue: exp.expirationValue, expirationUnit: exp.expirationUnit, neverExpire: exp.neverExpire, password };
   }
 
   function goToSummary(alias) {
@@ -635,11 +662,13 @@
     const resetExpiration = resetExpCheckbox.checked;
     let expirationValue = 0;
     let expirationUnit = 'days';
+    let neverExpire = false;
     if (resetExpiration) {
       const exp = readExpiration();
       if (!exp) return;
       expirationValue = exp.expirationValue;
       expirationUnit = exp.expirationUnit;
+      neverExpire = exp.neverExpire;
     }
 
     // Clearing the password field removes it; leaving the placeholder dots
@@ -667,7 +696,7 @@
       const res = await fetch('/api/link-manager/links/' + BOOT.linkId, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ alias, destination, resetExpiration, expirationValue, expirationUnit, password, removePassword }),
+        body: JSON.stringify({ alias, destination, resetExpiration, expirationValue, expirationUnit, neverExpire, password, removePassword }),
       });
       if (!res.ok) {
         if (res.status === 409) {

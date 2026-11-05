@@ -12,10 +12,11 @@ inside the deployment dir there is a docker-compose which brings up the whole si
 2. build primary dockerfile `docker build -f deploy/site.dockerfile -t site:v1 .`
 3. start the compose in deploy/
 
-## Recent versions
+## Recent versions (docker tags)
 **v1:** latest major update where a single go app hosts the blog and various tools.
 **v1.01:** added feedback area to `/about`, gave survey bot a new qr reader, and Blog case mismatch bug fix.
 **v1.02:** survey bot talks over a websocket for live status updates and skips expired surveys.
+**v1.03:** self user permissions extended for link shortener.
 
 ### Environment files
 Two `.env` files, neither committed (see `.gitignore`), need to exist before the site runs:

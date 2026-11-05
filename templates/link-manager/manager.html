@@ -62,6 +62,13 @@
             Reset/modify expiration timer
           </label>
 
+          {{if .IsOwner}}
+          <label class="checkbox-row">
+            <input type="checkbox" id="never-expire-checkbox" />
+            Never expire (sets the expiration 100 years out)
+          </label>
+          {{end}}
+
           <div class="field-group expiration-row">
             <label for="exp-value">Expires in</label>
             <div class="expiration-inputs">

@@ -208,20 +208,40 @@ func normalizeDestination(dest string) string {
 	return "https://" + trimmed
 }
 
+// expirationDuration converts a value and unit to a duration, capping the total
+// time at maxDays whichever unit is used. The value is compared against the
+// cap expressed in that unit, so an oversized value is rejected before the
+// multiplication that could overflow.
 func expirationDuration(value int, unit string, maxDays int) (time.Duration, error) {
-	if value <= 0 || value > maxDays {
-		return 0, fmt.Errorf("expiration value must be between 1 and %d", maxDays)
-	}
+	var unitLength time.Duration
 	switch unit {
 	case "min":
-		return time.Duration(value) * time.Minute, nil
+		unitLength = time.Minute
 	case "hr":
-		return time.Duration(value) * time.Hour, nil
+		unitLength = time.Hour
 	case "days":
-		return time.Duration(value) * 24 * time.Hour, nil
+		unitLength = 24 * time.Hour
 	default:
 		return 0, fmt.Errorf("unknown expiration unit %q", unit)
 	}
+
+	maxValue := int64(time.Duration(maxDays) * 24 * time.Hour / unitLength)
+	if value <= 0 || int64(value) > maxValue {
+		return 0, fmt.Errorf("expiration must be between 1 and %d %s (max %d days)", maxValue, unit, maxDays)
+	}
+	return time.Duration(value) * unitLength, nil
+}
+
+// resolveExpiration returns how long a link should live. neverExpire is only
+// honored for the site owner and uses the owner's maximum expiration.
+func resolveExpiration(user *authmodels.User, neverExpire bool, value int, unit string) (time.Duration, error) {
+	if neverExpire {
+		if user == nil || user.Email != ownerEmail {
+			return 0, errors.New("only the site owner can create links that never expire")
+		}
+		return ownerMaxExpirationDays * 24 * time.Hour, nil
+	}
+	return expirationDuration(value, unit, maxExpirationDays(user))
 }
 
 func isUniqueViolation(err error) bool {
@@ -298,6 +318,7 @@ type createLinkRequest struct {
 	Destination     string `json:"destination"`
 	ExpirationValue int    `json:"expirationValue"`
 	ExpirationUnit  string `json:"expirationUnit"`
+	NeverExpire     bool   `json:"neverExpire"`
 	Password        string `json:"password"`
 	TurnstileToken  string `json:"turnstileToken"`
 }
@@ -328,7 +349,7 @@ func (h *Handlers) LinkManagerCreateHandler(w http.ResponseWriter, r *http.Reque
 
 	user := authhandlers.CurrentUser(h.DB, r)
 
-	duration, err := expirationDuration(req.ExpirationValue, req.ExpirationUnit, maxExpirationDays(user))
+	duration, err := resolveExpiration(user, req.NeverExpire, req.ExpirationValue, req.ExpirationUnit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -946,6 +967,7 @@ type updateLinkRequest struct {
 	ResetExpiration bool   `json:"resetExpiration"`
 	ExpirationValue int    `json:"expirationValue"`
 	ExpirationUnit  string `json:"expirationUnit"`
+	NeverExpire     bool   `json:"neverExpire"`
 	Password        string `json:"password"`
 	RemovePassword  bool   `json:"removePassword"`
 }
@@ -999,7 +1021,7 @@ func (h *Handlers) LinkManagerUpdateHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	if req.ResetExpiration {
-		duration, err := expirationDuration(req.ExpirationValue, req.ExpirationUnit, maxExpirationDays(user))
+		duration, err := resolveExpiration(user, req.NeverExpire, req.ExpirationValue, req.ExpirationUnit)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

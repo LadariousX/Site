@@ -16,7 +16,7 @@ services:
     command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
 
   site:
-    image: site:v1
+    image: site:v1.02
     volumes:
       - ../blog/posts:/app/blog/posts:ro
       - ../blog/data:/app/blog/data

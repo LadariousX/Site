@@ -48,7 +48,7 @@
       <h2>The Original Survey Bot</h2>
       <p>Was made in early 2025 and originally designed to enter me into the Raising Canes <a href="https://raisingcanes.com/freecanesforayear/">Free Canes for a Year</a>
       Contest. Since I didnt have my website back then, the system's home was a discord chat bot that worked with a simple CLI.
-      The profile picture is of<a href='https://youtu.be/I6kBfBXZBdc?si=kcDMnlfJKiotRqyq'>Lazlo Hollyfeld</a> from the movie Real Genius who has a similar interest in entering sweepstakes.</p>
+      The profile picture is of <a href='https://youtu.be/I6kBfBXZBdc?si=kcDMnlfJKiotRqyq'>Lazlo Hollyfeld</a> from the movie Real Genius who has a similar interest in entering sweepstakes.</p>
       <img src="/static/images/survey-bot.webp" alt="">
     </div>
   </main>
@@ -219,6 +219,7 @@
     submitBtn.disabled = true;
     codeDisplay.hidden = true;
     showStatus('Running security check...', 'pending');
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // status box is at the top of the page
     turnstile.execute(widgetId);
   });
 
